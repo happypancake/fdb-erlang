@@ -1,0 +1,8 @@
+ebin/*
+.eunit/*
+doc/*
+*.beam
+*.dump
+*.o
+*.so
+*.swp
