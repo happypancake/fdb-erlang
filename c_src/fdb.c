@@ -1,4 +1,4 @@
-#include <stdio.h>
+/*#include <stdio.h>
 #include <pthread.h>
 #include "erl_nif.h"
 
@@ -10,7 +10,6 @@
 
 static ErlNifResourceType* fdb_ctx_resource = NULL;
 static pthread_t run_thread;
-
 typedef struct {
   FDBDatabase* db;
 } Context;
@@ -159,3 +158,5 @@ static ERL_NIF_TERM enif_make_ok(ErlNifEnv* env, ERL_NIF_TERM details)
 
 
 ERL_NIF_INIT(fdb, nif_funcs, on_load, NULL, NULL, NULL);
+
+*/

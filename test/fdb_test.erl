@@ -14,9 +14,15 @@
 %correct_api_version_test() ->
 %	ok = fdb:api_version(?FDB_API_VERSION).
 
-open_a_db_test() ->
-	{ok, _Fdb} = fdb:open().
+ei_test() ->
+  io:format(file:get_cwd()),
+  ei:start("../priv/ei_drv.so"),
+  3 = ei:add(1,2),
+  ei:stop().
 
-open_a_transaction_test() ->
-	{ok, Fdb} = fdb:open(),
-	{ok, _Transaction} = fdb:transaction(Fdb).
+%%open_a_db_test() ->
+%%	{ok, _Fdb} = fdb:open().
+
+%%open_a_transaction_test() ->
+%%	{ok, Fdb} = fdb:open(),
+%%	{ok, _Transaction} = fdb:transaction(Fdb).

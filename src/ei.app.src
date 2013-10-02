@@ -1,4 +1,4 @@
-{application, fdb,
+{application, ei,
  [
   {description, ""},
   {vsn, "1"},
