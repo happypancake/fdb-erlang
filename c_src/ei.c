@@ -50,9 +50,9 @@ int main() {
 
     ETERM* result = run(cmd);
 
-    int size = erl_term_len(result)+1;
+    int size = erl_term_len(result);
 
-    byte* output = malloc(size);
+    byte* output = malloc(size+1);
     erl_encode(result,output);
 
     write_cmd(output,size);
