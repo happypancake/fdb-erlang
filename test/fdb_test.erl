@@ -15,8 +15,8 @@
 %	ok = fdb:api_version(?FDB_API_VERSION).
 
 ei_test() ->
-  io:format(file:get_cwd()),
   ei:start("../priv/ei_drv.so"),
+  timer:sleep(500),
   3 = ei:add(1,2),
   ei:stop().
 

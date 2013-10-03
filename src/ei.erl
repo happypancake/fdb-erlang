@@ -25,7 +25,7 @@ call_port(Msg) ->
 init(ExtPrg) ->
     register(?MODULE, self()),
     process_flag(trap_exit, true),
-    Port = open_port({spawn, ExtPrg}, [{packet, 2}, binary]),
+    Port = open_port({spawn, ExtPrg}, [{packet, 2}, binary,exit_status]),
     PInfo = erlang:port_info(Port),
     io:format("Port: ~p   PInfo: ~p~n", [Port, PInfo]),
     loop(Port).

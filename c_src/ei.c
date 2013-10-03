@@ -85,7 +85,7 @@ static ETERM* run(ETERM* cmd)
     }
   }
   if (!found) {
-   ETERM* members[] = {erl_mk_atom("error"),erl_mk_atom("badmat")};
+   ETERM* members[] = {erl_mk_atom("error"),erl_mk_atom("badmatch")};
    result = erl_mk_tuple(members,2);
   }
   
