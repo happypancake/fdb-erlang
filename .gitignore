@@ -6,3 +6,4 @@ doc/*
 *.o
 *.so
 *.swp
+deps/*

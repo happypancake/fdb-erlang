@@ -14,11 +14,15 @@
 %correct_api_version_test() ->
 %	ok = fdb:api_version(?FDB_API_VERSION).
 
-ei_test() ->
-  ei:start("../priv/ei_drv.so"),
+fdb_add_test() ->
+  FDB = fdb:start_link(),
   timer:sleep(500),
-  3 = ei:add(1,2),
-  ei:stop().
+  ?assertEqual(3, fdb:add(FDB, 1,2)).
+
+fdb_double_test() ->
+  FDB = fdb:start_link(),
+  timer:sleep(500),
+  ?assertEqual(2, fdb:double(FDB, 1)).
 
 %%open_a_db_test() ->
 %%	{ok, _Fdb} = fdb:open().
