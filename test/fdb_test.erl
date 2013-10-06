@@ -15,14 +15,15 @@
 %	ok = fdb:api_version(?FDB_API_VERSION).
 
 fdb_add_test() ->
-  FDB = fdb:start_link(),
+  {ok,FDB} = fdb:start_link("../priv","test"),
   timer:sleep(500),
-  ?assertEqual(3, fdb:add(FDB, 1,2)).
+  ?assertEqual({ok,3}, fdb:add(FDB, 1,2)).
+  
 
 fdb_double_test() ->
-  FDB = fdb:start_link(),
+  {ok,FDB} = fdb:start_link("../priv","test"),
   timer:sleep(500),
-  ?assertEqual(2, fdb:double(FDB, 1)).
+  ?assertEqual({ok,2}, fdb:double(FDB, 1)).
 
 %%open_a_db_test() ->
 %%	{ok, _Fdb} = fdb:open().
