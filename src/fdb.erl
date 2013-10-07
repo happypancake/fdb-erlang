@@ -1,7 +1,7 @@
 -module(fdb).
 -export([start_link/2, stop/1]).
 -export([api_version/2,setup_network/1,run_network/1]).
--export([create_cluster/2]).
+-export([create_cluster/2,destroy_cluster/2]).
 
 
 % Commands to be executed by the driver.

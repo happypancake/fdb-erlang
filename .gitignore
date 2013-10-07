@@ -7,3 +7,4 @@ doc/*
 *.so
 *.swp
 deps/*
+*.orig

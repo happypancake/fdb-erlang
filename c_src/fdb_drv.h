@@ -13,8 +13,8 @@
  * amount of calls made to the driver.
  */
 typedef struct gdt_drv_t {
-  pthread_t network_thread;
-  int network_thread_started;
+    pthread_t network_thread;
+    int network_thread_started;
 } gdt_drv_t;
 
 /**
@@ -22,12 +22,12 @@ typedef struct gdt_drv_t {
  * amount of calls made to the respective thread.
  */
 typedef struct gdt_trd_ {
-  int count;
+    int count;
 } gdt_trd_t;
 
 typedef struct {
-  int cmd_id;
-  void (*get_result)(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
+    int cmd_id;
+    void (*get_result)(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
 } APIFunc;
 
 

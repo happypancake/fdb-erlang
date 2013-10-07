@@ -34,7 +34,7 @@ cluster_test() ->
   fdb:api_version(FDB,?FDB_API_VERSION),
   fdb:setup_network(FDB),
   fdb:run_network(FDB),
-  ClusterId = fdb:create_cluster(FDB,?FDB_CLUSTER_FILE).
+  _ClusterId = fdb:create_cluster(FDB,?FDB_CLUSTER_FILE).
   %% this crashes
   %fdb:destroy_cluster(FDB,ClusterId).
 
