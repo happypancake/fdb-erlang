@@ -22,21 +22,19 @@ setup_network_test() ->
   ?assertEqual(ok,fdb:setup_network(FDB)),
   ?assertEqual({error,"network_already_setup"},fdb:setup_network(FDB)).
 
-fdb_double_test() ->
+run_network_test() ->
   {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
-  ?assertEqual({ok,2}, fdb:double(FDB, 1)),
-  fdb:stop(FDB).
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  ?assertEqual(ok,fdb:run_network(FDB)),
+  ?assertEqual({error,"network_already_running"},fdb:run_network(FDB)).
 
-fdb_add_test() ->
+cluster_test() ->
   {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
-  ?assertEqual({ok,3}, fdb:add(FDB, 1,2)),
-  fdb:stop(FDB).
-
-
-
-
-%%open_a_transaction_test() ->
-%%	{ok, Fdb} = fdb:open(),
-%%	{ok, _Transaction} = fdb:transaction(Fdb).
-%%
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  fdb:run_network(FDB),
+  ClusterId = fdb:create_cluster(FDB,?FDB_CLUSTER_FILE).
+  %% this crashes
+  %fdb:destroy_cluster(FDB,ClusterId).
 

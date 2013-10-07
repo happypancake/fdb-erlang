@@ -2,6 +2,7 @@
 #define __GEN_DRIVER_TEST__
 
 #include "gen_driver.h"
+#include <pthread.h>
 
 /* ----------------------------------------------------------------------------
  * Type definitions
@@ -12,7 +13,8 @@
  * amount of calls made to the driver.
  */
 typedef struct gdt_drv_t {
-  int count;
+  pthread_t network_thread;
+  int network_thread_started;
 } gdt_drv_t;
 
 /**
@@ -36,10 +38,11 @@ typedef struct {
 /**
  * Actions to be executed by the driver.
  */
-#define CMD_ADD 0x01
-#define CMD_DOUBLE 0x02
 #define CMD_API_VERSION 0x03
 #define CMD_SETUP_NETWORK 0x04
+#define CMD_RUN_NETWORK 0x05
+#define CMD_CREATE_CLUSTER  0x06
+#define CMD_DESTROY_CLUSTER  0x07
 
 
 /**
