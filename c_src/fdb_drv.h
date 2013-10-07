@@ -23,6 +23,12 @@ typedef struct gdt_trd_ {
   int count;
 } gdt_trd_t;
 
+typedef struct {
+  int cmd_id;
+  void (*get_result)(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
+} APIFunc;
+
+
 /* ----------------------------------------------------------------------------
  * Macros
  * ------------------------------------------------------------------------- */
@@ -32,6 +38,8 @@ typedef struct gdt_trd_ {
  */
 #define CMD_ADD 0x01
 #define CMD_DOUBLE 0x02
+#define CMD_API_VERSION 0x03
+
 
 /**
  * Error atoms to be returned by the generic driver.

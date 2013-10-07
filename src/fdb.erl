@@ -1,10 +1,12 @@
 -module(fdb).
 -export([start_link/2, stop/1]).
 -export([add/3, double/2]).
+-export([api_version/2]).
 
 % Commands to be executed by the driver.
 -define(CMD_ADD, 16#01).
 -define(CMD_DOUBLE, 16#02).
+-define(CMD_API_VERSION, 16#03).
 
 %% ----------------------------------------------------------------------------
 %% Public functions
@@ -27,4 +29,7 @@ add(Pid, Val1, Val2) ->
 
 double(Pid, Val) ->
   gen_server:call(Pid, { port, ?CMD_DOUBLE, Val }).
+
+api_version(Pid, Version) ->
+  gen_server:call(Pid, {port, ?CMD_API_VERSION, Version}).
 
