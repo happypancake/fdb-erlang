@@ -39,6 +39,7 @@ typedef struct {
 #define CMD_ADD 0x01
 #define CMD_DOUBLE 0x02
 #define CMD_API_VERSION 0x03
+#define CMD_SETUP_NETWORK 0x04
 
 
 /**

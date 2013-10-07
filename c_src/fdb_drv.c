@@ -9,12 +9,20 @@
 #define FDB_API_VERSION 21
 #include "fdb_c.h"
 
-void ei_fdb_err(gd_res_t *res, fdb_error_t errcode)
+void ei_ok(gd_res_t *res) 
 {
-  ei_encode_tuple_header(res->buf, &res->index, 2);
-  ei_encode_atom(res->buf, &res->index, "error");
-  const char* err = fdb_get_error(errcode);
-  ei_encode_string(res->buf, &res->index, err);
+  ei_encode_atom(res->buf, &res->index, "ok");
+}
+
+fdb_error_t ei_fdb_err(gd_res_t *res, fdb_error_t errcode)
+{
+  if (errcode != 0) {
+    ei_encode_tuple_header(res->buf, &res->index, 2);
+    ei_encode_atom(res->buf, &res->index, "error");
+    const char* err = fdb_get_error(errcode);
+    ei_encode_string(res->buf, &res->index, err);
+  } 
+  return errcode;
 }
 
 void api_add(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
@@ -48,24 +56,23 @@ void api_double(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 void cmd_api_version(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 {
   long version;
-  fdb_error_t errcode;
   if (ei_decode_long(req->buf, &req->index, &version)) return error(res, GDE_ERR_DEC);
 
-  if ((errcode = fdb_select_api_version(version))!= 0)
-  {
-    return ei_fdb_err(res,errcode);
-  }
+  if (ei_fdb_err(res, fdb_select_api_version(version))==0) 
+    return ei_ok(res);
+}
 
-  //ei_encode_tuple_header(res->buf, &res->index, 2);
-  //ei_encode_atom(res->buf, &res->index, "ok");
-  ei_encode_atom(res->buf, &res->index, "ok");
-
+void cmd_setup_network(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
+{
+  if (ei_fdb_err(res, fdb_setup_network())==0)
+    return ei_ok(res);
 }
 
 static APIFunc API[]= { 
   {CMD_ADD, api_add},
   {CMD_DOUBLE, api_double},
-  {CMD_API_VERSION, cmd_api_version}
+  {CMD_API_VERSION, cmd_api_version},
+  {CMD_SETUP_NETWORK, cmd_setup_network}
 };    
 
 /* ----------------------------------------------------------------------------
