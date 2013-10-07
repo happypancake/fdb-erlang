@@ -10,20 +10,12 @@
 -define (SO_FOLDER, "../priv").
 -define (SO_FILE, "test").
 
-too_large_api_version_test() ->
+api_version_test() ->
   {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
-  ?assertEqual({error,"api_version_invalid"},fdb:api_version(FDB,999)).
-
-% This can only be called once
-correct_api_version_test() ->
-  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
-  ?assertEqual(ok, fdb:api_version(FDB,?FDB_API_VERSION)).
-
-% This can only be called once
-api_version_twice_test() ->
-  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
-  fdb:api_version(FDB,?FDB_API_VERSION),
+  ?assertEqual({error,"api_version_invalid"},fdb:api_version(FDB,999)),
+  ?assertEqual(ok, fdb:api_version(FDB,?FDB_API_VERSION)),
   ?assertEqual({error,"api_version_already_set"}, fdb:api_version(FDB,?FDB_API_VERSION)).
+
 
 fdb_double_test() ->
   {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
