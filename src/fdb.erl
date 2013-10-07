@@ -23,7 +23,7 @@ stop(Pid) ->
   gen_server:cast(Pid, stop).
 
 add(Pid, Val1, Val2) ->
-  gen_server:call(Pid, { port, ?CMD_ADD, Val1, Val2 }).
+  gen_server:call(Pid, { port, ?CMD_ADD, {Val1, Val2} }).
 
 double(Pid, Val) ->
   gen_server:call(Pid, { port, ?CMD_DOUBLE, Val }).

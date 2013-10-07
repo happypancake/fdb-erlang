@@ -8,57 +8,45 @@
 
 typedef struct {
   int cmd_id;
-  int arity;
   void (*get_result)(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
 } APIFunc;
 
 void api_add(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
 void api_double(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd);
 
-int ei_get_long(gd_req_t *req, gd_res_t *res, long *value);
-
 static APIFunc API[]= { 
-  {CMD_ADD, 2, api_add},
-  {CMD_DOUBLE, 1, api_double}
+  {CMD_ADD, api_add},
+  {CMD_DOUBLE, api_double}
 };    
 
 void api_add(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 {
-   long val1,val2;
+  long val1,val2;
+  int arity;
 
-   if (!ei_get_long(req, res, &val1) || !ei_get_long(req, res, &val2)) return;
-     
-   long result = val1+val2;
+  if (ei_decode_tuple_header(req->buf,&req->index,&arity) || arity!=2 ||
+      ei_decode_long(req->buf, &req->index, &val1) ||
+      ei_decode_long(req->buf, &req->index, &val2))
+    return error(res, GDE_ERR_DEC); 
 
-   ei_encode_long(res->buf, &res->index, result);
+  long result = val1+val2;
+
+  ei_encode_tuple_header(res->buf, &res->index, 2);
+  ei_encode_atom(res->buf, &res->index, "ok");
+  ei_encode_long(res->buf, &res->index, result);
 }
 
 void api_double(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 {
-   long val;
-   if (!ei_get_long(req, res, &val)) return;
+  long val;
+  if (ei_decode_long(req->buf, &req->index, &val)) return error(res, GDE_ERR_DEC);
 
-   long result = val*2;
-   ei_encode_long(res->buf, &res->index, result);
+  long result = val*2;
+  ei_encode_tuple_header(res->buf, &res->index, 2);
+  ei_encode_atom(res->buf, &res->index, "ok");
+  ei_encode_long(res->buf, &res->index, result);
 }
 
-int ei_get_long(gd_req_t *req,gd_res_t *res,long *value)
-{
-  int type,size;
-
-  if (ei_get_type(req->buf, &req->index, &type, &size)!=0 || type != ERL_SMALL_INTEGER_EXT) 
-  {
-     error(res,GDE_ERR_TPE);
-     return 0;
-  }
-  else if (ei_decode_long(req->buf, &req-> index, value)!=0)
-  {
-     error(res, GDE_ERR_DEC);
-     return 0;
-  }
-  else 
-     return 1;
-}
 
 /* ----------------------------------------------------------------------------
  * Driver callbacks
@@ -126,18 +114,15 @@ dispatch(gd_req_t *req, gd_res_t *res, void *drv_state, void *trd_state) {
   int  found = 0;
   int api_count = sizeof(API)/sizeof(API[0]);
   int i;
-  int size,type;
   for (i = 0; i < api_count; i++)
   {
     if (API[i].cmd_id != req->cmd) continue; 
     found = !found;
-    if (ei_get_type(req->buf, &req->index, &type, &size) || size != API[i].arity)
-      return error(res, GDE_ERR_ARI);
     API[i].get_result(req, res, (gdt_drv_t *)drv_state, (gdt_trd_t*)trd_state);
     break;
   }
   if (!found) {
-      error(res, GDE_ERR_CMD);
+    error(res, GDE_ERR_CMD);
   }
 }
 
