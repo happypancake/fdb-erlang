@@ -10,6 +10,11 @@
 #define FDB_API_VERSION 21
 #include "fdb_c.h"
 
+void* network_loop(void *arg)
+{
+  fdb_run_network();
+}
+
 void ei_ok(gd_res_t *res) 
 {
   ei_encode_atom(res->buf, &res->index, "ok");
@@ -32,14 +37,17 @@ int ei_get_string(gd_req_t *req,char** result)
   return 0;
 }
 
+void ei_error(gd_res_t *res, const char* msg) 
+{
+  ei_encode_tuple_header(res->buf, &res->index,2);
+  ei_encode_atom(res->buf, &res->index,"error");
+  ei_encode_string(res->buf, &res->index,msg); 
+}
+
 fdb_error_t ei_fdb_error(gd_res_t *res, fdb_error_t errcode)
 {
-  if (errcode != 0) {
-    ei_encode_tuple_header(res->buf, &res->index, 2);
-    ei_encode_atom(res->buf, &res->index, "error");
-    const char* err = fdb_get_error(errcode);
-    ei_encode_string(res->buf, &res->index, err);
-  } 
+  if (errcode != 0) 
+     ei_error(res,fdb_get_error(errcode));
   return errcode;
 }
 
@@ -66,18 +74,6 @@ void cmd_setup_network(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *
 {
   if (ei_fdb_error(res, fdb_setup_network())==0)
     return ei_ok(res);
-}
-
-void* network_loop(void *arg)
-{
-  fdb_run_network();
-}
-
-void ei_error(gd_res_t *res, const char* msg) 
-{
-  ei_encode_tuple_header(res->buf, &res->index,2);
-  ei_encode_atom(res->buf, &res->index,"error");
-  ei_encode_string(res->buf, &res->index,msg); 
 }
 
 void cmd_run_network(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
