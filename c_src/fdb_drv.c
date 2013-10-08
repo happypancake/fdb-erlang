@@ -156,6 +156,7 @@ void cmd_create_cluster(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t 
     FDBCluster *cluster=NULL;
 
     errorcode = ei_fdb_error(res, fdb_future_get_cluster(future, &cluster));
+   
     fdb_future_destroy(future);
 
     if (errorcode!=0)
@@ -238,6 +239,12 @@ void cmd_transaction_destroy(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_t
 
 void cmd_transaction_get(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 {
+  int arity;
+  if (ei_decode_tuple_header(req->buf, &req->index, &arity)!=0 || arity!=2)
+  {
+    return ei_error(res,"invalid_tuple");
+  }
+
   FDBTransaction *Tx;
   if (ei_decode_ptr(req,res,(void**)&Tx)!=0)
   {
@@ -292,6 +299,11 @@ void cmd_transaction_get(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t
 
 void cmd_transaction_set(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
 {
+  int arity;
+  if (ei_decode_tuple_header(req->buf, &req->index, &arity)!=0 || arity!=3)
+  {
+    return ei_error(res,"invalid_tuple");
+  }
   FDBTransaction *Tx;
   if (ei_decode_ptr(req,res,(void**)&Tx)!=0)
   {

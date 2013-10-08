@@ -84,11 +84,11 @@ transaction_destroy({Pid,tx,TxHandle}) ->
   gen_server:call(Pid,{port, ?CMD_TRANSACTION_DESTROY, TxHandle}).
 
 transaction_get({Pid,tx,TxHandle}, Key, Default) ->
-  Result = gen_server:call(Pid, {port, ?CMD_TRANSACTION_GET,TxHandle,Key}),
+  Result = gen_server:call(Pid, {port, ?CMD_TRANSACTION_GET,{TxHandle,Key}}),
   case Result of
     {error,not_found} -> Default;
     _ -> Result
   end.
 
 transaction_set({Pid, tx,TxHandle}, Key, Value) ->
-  gen_server:call(Pid, {port, ?CMD_TRANSACTION_SET,TxHandle,Key,Value}).
+  gen_server:call(Pid, {port, ?CMD_TRANSACTION_SET,{TxHandle,Key,Value}}).
