@@ -3,9 +3,9 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -define (FDB_API_VERSION, 21).
--define (FDB_CLUSTER_FILE, "fixtures/").
--define (A_KEY,"Hello").
--define (A_VALUE, "World").
+
+-define (A_KEY,<<"Hello">>).
+-define (A_VALUE, <<"World">>).
 
 -define (SO_FOLDER, "../priv").
 -define (SO_FILE, "test").
@@ -34,7 +34,45 @@ cluster_test() ->
   fdb:api_version(FDB,?FDB_API_VERSION),
   fdb:setup_network(FDB),
   fdb:run_network(FDB),
-  _ClusterId = fdb:create_cluster(FDB,?FDB_CLUSTER_FILE).
-  %% this crashes
-  %fdb:destroy_cluster(FDB,ClusterId).
+  Cluster = {FDB,cl,_} = fdb:create_cluster(FDB),
+  ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
+
+database_test() ->
+  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  fdb:run_network(FDB),
+  Cluster = fdb:create_cluster(FDB),
+  Database = {FDB,db,_} = fdb:cluster_create_database(Cluster), 
+  ?assertEqual(ok,fdb:database_destroy(Database)),
+  ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
+
+transaction_test() ->
+  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  fdb:run_network(FDB),
+  Cluster = fdb:create_cluster(FDB),
+  Database = {FDB,db,_} = fdb:cluster_create_database(Cluster), 
+  Transaction = {FDB,tx,_} = fdb:database_create_transaction(Database),
+  ?assertEqual(ok,fdb:transaction_destroy(Transaction)),
+  ?assertEqual(ok,fdb:database_destroy(Database)),
+  ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
+
+basic_storage_test() ->
+  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  fdb:run_network(FDB),
+  Cluster = fdb:create_cluster(FDB),
+  Database = fdb:cluster_create_database(Cluster), 
+  Transaction = fdb:database_create_transaction(Database),
+  ?assertEqual(not_found,fdb:transaction_get(Transaction,?A_KEY,not_found)),
+  fdb:transaction_set(Transaction,?A_KEY,?A_VALUE),
+  ?assertEqual(?A_VALUE,fdb:transaction_get(Transaction,?A_KEY,not_found)),
+  ?assertEqual(ok,fdb:transaction_destroy(Transaction)),
+  ?assertEqual(ok,fdb:database_destroy(Database)),
+  ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
+
+
 
