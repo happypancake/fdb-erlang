@@ -190,11 +190,16 @@ void cmd_cluster_create_database(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, g
       (const uint8_t*)dbname,
       strlen(dbname));
 
-  if (wait_until_ready(res, future)!=0) return;
+  fdb_error_t errcode = wait_until_ready(res, future); 
+  if (errcode!=0) 
+  {
+    fdb_future_destroy(future);
+    return;
+  }
 
   FDBDatabase* DB;
 
-  fdb_error_t errcode =ei_fdb_error(res,fdb_future_get_database(future, &DB));
+  errcode =ei_fdb_error(res,fdb_future_get_database(future, &DB));
   fdb_future_destroy(future);
   if (errcode!=0) return;
   
