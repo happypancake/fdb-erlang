@@ -74,5 +74,27 @@ basic_storage_test() ->
   ?assertEqual(ok,fdb:database_destroy(Database)),
   ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
 
+larger_value_storage_test() ->
+  {ok,FDB} = fdb:start_link(?SO_FOLDER, ?SO_FILE),
+  fdb:api_version(FDB,?FDB_API_VERSION),
+  fdb:setup_network(FDB),
+  fdb:run_network(FDB),
+  Cluster = fdb:create_cluster(FDB),
+  Database = fdb:cluster_create_database(Cluster), 
+  Transaction = fdb:database_create_transaction(Database),
+  LargeBinary = repeat_binary(?A_VALUE, 128),
+  fdb:transaction_set(Transaction,?A_KEY,LargeBinary),
+  ?assertEqual(LargeBinary,fdb:transaction_get(Transaction,?A_KEY,not_found)),
+  ?assertEqual(ok,fdb:transaction_destroy(Transaction)),
+  ?assertEqual(ok,fdb:database_destroy(Database)),
+  ?assertEqual(ok,fdb:cluster_destroy(Cluster)).
+
+repeat_binary(Bin,N) ->
+  repeat_binary(Bin,N,<<>>).
+
+repeat_binary(_Bin,0,Acc) ->
+  Acc;
+repeat_binary(Bin,N,Acc) ->
+  repeat_binary(Bin,N-1,<<Acc/binary,Bin/binary>>).
 
 

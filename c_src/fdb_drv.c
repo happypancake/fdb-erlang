@@ -292,6 +292,16 @@ void cmd_transaction_get(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t
   }
   else
   {
+    if (res->index+length > res->len)
+    {
+      int newlen = res->index+length+64;
+      char* newbuf = (char*)driver_alloc(newlen);
+      memcpy(newbuf,res->buf,res->index+1);
+      driver_free(res->buf);
+      res->buf = newbuf;
+      res->len = newlen;
+    }
+
     ei_encode_binary(res->buf, &res->index, (void*)value,length);
   }
   fdb_future_destroy(future);
