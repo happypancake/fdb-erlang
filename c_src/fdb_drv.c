@@ -57,11 +57,11 @@ int ei_get_bytes(gd_req_t *req, char** result, int *len)
   long size;
 
   *result = (char*)malloc(length);
-  if(ei_decode_binary(req->buf,&req->index,*result,&size)!=0 || size!=length);
+  if(ei_decode_binary(req->buf,&req->index,*result,&size)!=0 || size!=length)
   {
     return -1;
   }
-  *len = length;
+  *len = (int)size;
   return 0;
 }
 
@@ -72,10 +72,10 @@ int ei_decode_ptr(gd_req_t *req,gd_res_t *res,void** dest)
   int errcode = ei_decode_binary(
       req->buf, 
       &req->index,
-      (void*)&(data.ptr_data),
+      (void*)&data,
       &len);
 
-  if (errcode!=0 || len!=sizeof(ptr_data))
+  if (errcode!=0 || len!=sizeof(data))
   {
     ei_error(res,"invalid handle");
     *dest = NULL;
@@ -92,7 +92,7 @@ void ei_encode_ptr(gd_res_t *res, void* ptr)
 {
   ptr_data data;
   data.ptr = ptr;
-  ei_encode_binary(res->buf,&res->index,data.ptr_data,sizeof(data.ptr_data));
+  ei_encode_binary(res->buf,&res->index,&data,sizeof(data));
 }
 
 fdb_error_t ei_fdb_error(gd_res_t *res, fdb_error_t errcode)
