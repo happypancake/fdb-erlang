@@ -5,6 +5,7 @@
 -export([cluster_create_database/1,database_destroy/1]).
 -export([database_create_transaction/1,transaction_destroy/1]).
 -export([transaction_get/3,transaction_set/3]).
+-export([transaction_commit/1,transaction_clear/2]).
 
 -define(DEFAULT_HANDLE,<<0,0,0,0,0,0,0,0>>).
 
@@ -20,6 +21,8 @@
 -define(CMD_TRANSACTION_DESTROY,16#0B).
 -define(CMD_TRANSACTION_GET, 16#0C).
 -define(CMD_TRANSACTION_SET, 16#0D).
+-define(CMD_TRANSACTION_COMMIT, 16#0E).
+-define(CMD_TRANSACTION_CLEAR, 16#0F).
 
 %% ----------------------------------------------------------------------------
 %% Public functions
@@ -92,3 +95,10 @@ transaction_get({Pid,tx,TxHandle}, Key, Default) ->
 
 transaction_set({Pid, tx,TxHandle}, Key, Value) ->
   gen_server:call(Pid, {port, ?CMD_TRANSACTION_SET,{TxHandle,Key,Value}}).
+
+transaction_commit({Pid,tx,TxHandle}) ->
+  gen_server:call(Pid,{port, ?CMD_TRANSACTION_COMMIT, TxHandle}).
+
+transaction_clear({Pid,tx,TxHandle}, Key) ->
+  gen_server:call(Pid, {port, ?CMD_TRANSACTION_CLEAR,{TxHandle,Key}}).
+

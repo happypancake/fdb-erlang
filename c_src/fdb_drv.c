@@ -339,19 +339,80 @@ void cmd_transaction_set(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t
     fdb_transaction_set(Tx,(const uint8_t *)key,keysize,(const uint8_t*)val,valsize);
 }
 
+void cmd_transaction_commit(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
+{
+    FDBTransaction *Tx;
+    if (ei_decode_ptr(req,res,(void**)&Tx)!=0)
+    {
+        return ei_error(res,"invalid_transaction_handle");
+    }
+
+    while(1)
+    {
+      FDBFuture* future = fdb_transaction_commit(Tx);
+
+      fdb_error_t errcode = fdb_future_block_until_ready(future);
+
+      if (errcode!=0)
+      {
+        fdb_future_destroy(future);
+        future = fdb_transaction_on_error(Tx,errcode);
+        errcode = fdb_future_block_until_ready(future);
+        fdb_future_destroy(future);
+        if(errcode!=0)
+        {
+         fdb_transaction_destroy(Tx); 
+         ei_fdb_error(res,errcode);
+         return;
+        }
+      }
+      else
+        break;
+    }
+    ei_ok(res);
+}
+
+void cmd_transaction_clear(gd_req_t *req, gd_res_t *res, gdt_drv_t *drv, gdt_trd_t *trd)
+{
+    int arity;
+    if (ei_decode_tuple_header(req->buf, &req->index, &arity)!=0 || arity!=2)
+    {
+        return ei_error(res,"invalid_tuple");
+    }
+    FDBTransaction *Tx;
+    if (ei_decode_ptr(req,res,(void**)&Tx)!=0)
+    {
+        return ei_error(res,"invalid_transaction_handle");
+    }
+    char *key;
+    int keysize;
+
+    if (ei_get_bytes(req,&key,&keysize)!= 0)
+    {
+        ei_error(res,"invalid_key");
+        return;
+    }
+
+    fdb_transaction_clear(Tx,(const uint8_t *)key, keysize);
+    ei_ok(res);
+}
+
+
 
 static api_func_t API[]= {
-    {CMD_API_VERSION, cmd_api_version},
-    {CMD_SETUP_NETWORK, cmd_setup_network},
-    {CMD_RUN_NETWORK, cmd_run_network},
-    {CMD_CREATE_CLUSTER, cmd_create_cluster},
-    {CMD_CLUSTER_DESTROY, cmd_cluster_destroy},
-    {CMD_CLUSTER_CREATE_DATABASE, cmd_cluster_create_database},
-    {CMD_DATABASE_DESTROY, cmd_database_destroy},
-    {CMD_DATABASE_CREATE_TRANSACTION, cmd_database_create_transaction},
-    {CMD_TRANSACTION_DESTROY, cmd_transaction_destroy},
-    {CMD_TRANSACTION_GET, cmd_transaction_get},
-    {CMD_TRANSACTION_SET, cmd_transaction_set}
+    {0x03, cmd_api_version},
+    {0x04, cmd_setup_network},
+    {0x05, cmd_run_network},
+    {0x06, cmd_create_cluster},
+    {0x07, cmd_cluster_destroy},
+    {0x08, cmd_cluster_create_database},
+    {0x09, cmd_database_destroy},
+    {0x0a, cmd_database_create_transaction},
+    {0x0b, cmd_transaction_destroy},
+    {0x0c, cmd_transaction_get},
+    {0x0d, cmd_transaction_set},
+    {0x0e, cmd_transaction_commit},
+    {0x0f, cmd_transaction_clear}
 };
 
 /* ----------------------------------------------------------------------------
