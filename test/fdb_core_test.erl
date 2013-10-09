@@ -12,24 +12,28 @@
 -define (SO_FOLDER, "../priv").
 -define (SO_FILE, "test").
 
-api_version_test() ->
+api_version_test_skip() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
   ?assertEqual({error,"api_version_invalid"},fdb_core:api_version(FDB,999)),
   ?assertEqual(ok, fdb_core:api_version(FDB,?FDB_API_VERSION)),
-  ?assertEqual({error,"api_version_already_set"}, fdb_core:api_version(FDB,?FDB_API_VERSION)).
+  ?assertEqual({error,"api_version_already_set"},
+               fdb_core:api_version(FDB,?FDB_API_VERSION)),
+  ok=fdb_core:stop(FDB).
 
-setup_network_test() ->
+setup_network_test_skip() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
   fdb_core:api_version(FDB,?FDB_API_VERSION),
   ?assertEqual(ok,fdb_core:setup_network(FDB)),
-  ?assertEqual({error,"network_already_setup"},fdb_core:setup_network(FDB)).
+  ?assertEqual({error,"network_already_setup"},fdb_core:setup_network(FDB)),
+  ok=fdb_core:stop(FDB).
 
 run_network_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
   fdb_core:api_version(FDB,?FDB_API_VERSION),
   fdb_core:setup_network(FDB),
   ?assertEqual(ok,fdb_core:run_network(FDB)),
-  ?assertEqual({error,"network_already_running"},fdb_core:run_network(FDB)).
+  ?assertEqual({error,"network_already_running"},fdb_core:run_network(FDB)),
+  ok=fdb_core:stop(FDB).
 
 cluster_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -37,7 +41,8 @@ cluster_test() ->
   fdb_core:setup_network(FDB),
   fdb_core:run_network(FDB),
   Cluster = {FDB,cl,_} = fdb_core:create_cluster(FDB),
-  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)).
+  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)),
+  ok=fdb_core:stop(FDB).
 
 database_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -47,7 +52,8 @@ database_test() ->
   Cluster = fdb_core:create_cluster(FDB),
   Database = {FDB,db,_} = fdb_core:cluster_create_database(Cluster), 
   ?assertEqual(ok,fdb_core:database_destroy(Database)),
-  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)).
+  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)),
+  ok=fdb_core:stop(FDB).
 
 transaction_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -59,7 +65,8 @@ transaction_test() ->
   Transaction = {FDB,tx,_} = fdb_core:database_create_transaction(Database),
   ?assertEqual(ok,fdb_core:transaction_destroy(Transaction)),
   ?assertEqual(ok,fdb_core:database_destroy(Database)),
-  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)).
+  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)),
+  ok=fdb_core:stop(FDB).
 
 basic_storage_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -77,7 +84,8 @@ basic_storage_test() ->
   ?assertEqual(not_found,fdb_core:transaction_get(Transaction,?A_KEY,not_found)),
   ?assertEqual(ok,fdb_core:transaction_destroy(Transaction)),
   ?assertEqual(ok,fdb_core:database_destroy(Database)),
-  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)).
+  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)),
+  ok=fdb_core:stop(FDB).
 
 larger_value_storage_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -92,7 +100,8 @@ larger_value_storage_test() ->
   ?assertEqual(?A_LARGE_VALUE,fdb_core:transaction_get(Transaction,?A_KEY,not_found)),
   ?assertEqual(ok,fdb_core:transaction_destroy(Transaction)),
   ?assertEqual(ok,fdb_core:database_destroy(Database)),
-  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)).
+  ?assertEqual(ok,fdb_core:cluster_destroy(Cluster)),
+  ok=fdb_core:stop(FDB).
 
 commit_test() ->
   {ok,FDB} = fdb_core:start_link(?SO_FOLDER, ?SO_FILE),
@@ -115,7 +124,8 @@ commit_test() ->
   Tx3 = fdb_core:database_create_transaction(Database),
   ?assertEqual(not_found,fdb_core:transaction_get(Tx3,?ANOTHER_KEY,not_found)),
   ?assertEqual(ok,fdb_core:transaction_destroy(Tx3)),
-  ?assertEqual(ok,fdb_core:database_destroy(Database)).
+  ?assertEqual(ok,fdb_core:database_destroy(Database)),
+  ok=fdb_core:stop(FDB).
 
 repeat_value(Bin,N) ->
   repeat_value(Bin,N,<<>>).
