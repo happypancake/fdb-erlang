@@ -33,8 +33,8 @@ typedef struct {
 } api_func_t;
 
 typedef union {
-  void* ptr;
-  uint8_t ptr_data[8];
+    void* ptr;
+    uint8_t ptr_data[8];
 } ptr_data;
 
 /* ----------------------------------------------------------------------------
