@@ -1,4 +1,4 @@
--module(fdb).
+-module(fdb_core).
 -export([start_link/2, stop/1]).
 -export([api_version/2,setup_network/1,run_network/1]).
 -export([create_cluster/1,create_cluster/2,cluster_destroy/1]).
