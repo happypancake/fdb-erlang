@@ -1,0 +1,148 @@
+#!/bin/bash
+
+funcs() {
+  nm -D /usr/lib/libfdb_c.so |grep -Eo "fdb_[a-z_0-9]+"
+}
+
+func_pars() {
+  FUNC_NAME=$1
+  cat /usr/include/foundationdb/fdb_c.h  | tr '\n' ' '|grep -oPe "$FUNC_NAME[^;]+"|head -n 1|sed "s/$FUNC_NAME(//g" |sed "s/ )/,\n/g"|uniq|sed "s/,/;\n/g"|tr -s " "|grep -v "^$"
+}
+
+func_par_count() {
+  FUNC_NAME=$1
+  func_pars $FUNC_NAME |wc -l
+}
+
+generate_c_hdr() {
+  LINECOUNT=`funcs|wc -l`
+  C_HDR=$1
+  echo Outputting $LINECOUNT functions to $1
+  cat > $C_HDR <<EOL
+#ifndef __FDB_FUNCS__ 
+#define __FDB_FUNCS__
+
+#include "erl_nif.h"
+
+EOL
+
+(funcs) | while read FUNC_NAME
+do
+  echo "static ERL_NIF_TERM nif_$FUNC_NAME(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]);" >> $C_HDR
+done
+  cat >> $C_HDR <<EOL
+
+static ErlNifFunc nifs[] =
+{
+EOL
+  (funcs) | while read FUNC_NAME
+  do
+    PAR_COUNT=$(func_par_count $FUNC_NAME)
+    echo   {\"$FUNC_NAME\", $PAR_COUNT, nif_$FUNC_NAME}, >> $C_HDR
+  done
+  cat >> $C_HDR << EOL
+};
+#endif
+EOL
+}
+
+generate_c() {
+  LINECOUNT=`funcs|wc -l`
+  C_HDR=$1
+  echo Outputting $LINECOUNT functions to $1
+  cat > $C_HDR <<EOL
+#include "erl_nif.h"
+#include "fdb_nifs.h"
+
+#define FDB_API_VERSION 100
+
+#include "fdb_c.h"
+
+
+static ERL_NIF_TERM nif_error(ErlNifEnv* env,const char* error) 
+{
+  return enif_make_tuple2(env,enif_make_atom(env,"error"),enif_make_atom(env,error));
+}
+
+EOL
+(funcs) | while read FUNC_NAME
+do
+  PAR_COUNT=$(func_par_count $FUNC_NAME)
+  PARS="_parameters"
+  ERR=$PAR_COUNT$PARS
+  cat >> $C_HDR << EOL
+
+static ERL_NIF_TERM nif_$FUNC_NAME(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+  if (argc!=$PAR_COUNT) 
+  {
+    return nif_error(env,"expected_$ERR");
+  }
+
+EOL
+
+  func_pars $FUNC_NAME | sed 's,.*,// &,' >> $C_HDR
+  cat >> $C_HDR << EOL
+
+  return nif_error(env,"not_implemented");
+}
+EOL
+
+
+done
+cat >> $C_HDR << EOL
+
+ERL_NIF_INIT(fdb_nif,nifs,NULL,NULL,NULL,NULL)
+
+EOL
+}
+
+erl_func_def() {
+  FUNC_NAME=$1
+  PAR_COUNT=$(func_par_count $FUNC_NAME)
+  if [ $PAR_COUNT -eq 0 ]
+  then
+    echo "$FUNC_NAME() -> "
+  else
+    (func_pars $FUNC_NAME) |tr "\n" " " |grep -Po "[a-z_]+;"|sed "s/.*/_&/g"|tr "\n" " "|sed "s/;/,/g" |sed "s/, $//g "  | sed "s/.*/$FUNC_NAME(&) ->/g" 
+  fi
+}
+
+generate_erl() {
+  LINECOUNT=`funcs|wc -l`
+  C_HDR=$1
+  echo Outputting $LINECOUNT functions to $1
+  cat > $C_HDR <<EOL
+-module(fdb_nif).
+-compile([export_all]).
+
+init() ->
+  try_load(["./fdb_drv","./priv/fdb_drv","../priv/fdb_drv"],nok).
+  
+init(NifFile) ->
+  erlang:load_nif(NifFile,0).
+  
+try_load([],LastErr) ->
+  LastErr;
+try_load([H|T],ok) -> 
+  ok;
+try_load([H|T],_) ->
+  try_load(T,init(H)).
+
+EOL
+
+(funcs) | while read FUNC_NAME
+do
+  erl_func_def $FUNC_NAME >> $C_HDR
+  echo >> $C_HDR
+  echo "  nif_not_loaded." >> $C_HDR
+  echo >> $C_HDR
+done
+}
+
+## Generate header file
+generate_c_hdr fdb_nifs.h
+
+generate_c fdb_nifs.c
+
+generate_erl fdb_nif.erl
