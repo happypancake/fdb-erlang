@@ -3,6 +3,7 @@
 -export([api_version/2,open/0,open/1]).
 -export([get/2,get/3,set/3]).
 -export([clear/2,commit/1,close/1]).
+-export([atomic/2]).
 
 -define (FDB_API_VERSION, 21).
 
@@ -23,7 +24,8 @@ try_start_link([Folder|T]) ->
     Result = fdb:start_link(Folder,"test"),
     case Result of
       {ok,_Pid} -> Result;
-      {error,{open_error,-10}} -> try_start_link(T) 
+      {error,{open_error,-10}} -> try_start_link(T); 
+      {error,bad_driver_name} -> try_start_link(T) 
     end.
 
 open(FDB) ->
@@ -57,21 +59,19 @@ commit({Tx={_Pid,tx,_TxHandle},_Parent}) ->
 commit(Tx={_Pid,tx,_TxHandle}) -> 
   fdb_core:transaction_commit(Tx).
 
-close({Tx={_Pid,tx,_TxHandle},Parent}) ->
+close({Tx={_Pid,tx,_TxHandle},{Database,{Cluster}}}) ->
   fdb_core:transaction_commit(Tx),
   fdb_core:transaction_destroy(Tx),
-  close(Parent);
-close({DB={_Pid,db,_DbHandle},Parent}) ->
-  fdb_core:database_destroy(DB),
-  close(Parent);
-close({Cluster={Pid,cl,_ClHandle}}) ->
-  fdb_core:cluster_destroy(Cluster),
-  fdb_core:stop(Pid);
-close({Tx={_Pid,tx,_TxHandle}}) ->
-  fdb_core:transaction_commit(Tx),
-  fdb_core:transaction_destroy(Tx).
-  
-  
+  fdb_core:database_destroy(Database),
+  fdb_core:cluster_destroy(Cluster).
 
-
-
+atomic({{_Pid,tx,_TxHandle},WR = {Database,{_Cluster}}},SomeFunc) ->
+  Tx = fdb_core:database_create_transaction(Database),
+  try
+    SomeFunc({Tx,WR}),
+    fdb_core:transaction_commit(Tx)
+  catch
+    Exception:Reason -> {error,Exception,Reason}
+  after
+    fdb_core:transaction_destroy(Tx)
+  end.

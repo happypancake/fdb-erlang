@@ -11,3 +11,18 @@ hello_world_test() ->
   ok = fdb:clear(DB,AKey),
   not_found = fdb:get(DB,AKey),
   ok = fdb:close(DB).
+
+atomic_test() ->
+  DB = fdb:open(),
+  AKey = abc,
+  AValue = xyz,
+  not_found = fdb:get(DB,AKey),
+  fdb:atomic(DB,fun(Tx)->
+        fdb:set(Tx,AKey,AValue),
+        _ = 1/0
+    end),
+  not_found = fdb:get(DB,AKey),
+  fdb:close(DB).
+
+
+
