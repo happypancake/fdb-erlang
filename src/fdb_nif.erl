@@ -129,7 +129,7 @@ fdb_get_error(_code) ->
 fdb_network_set_option(_option, _value, _value_length) ->
   nif_not_loaded.
 
-fdb_select_api_version_impl(_v, _option, _value, _value_length) ->
+fdb_select_api_version(_runtime_version) ->
   nif_not_loaded.
 
 fdb_transaction_add_conflict_range(_tr, _begin_key_name, _begin_key_name_length, _end_key_name, _end_key_name_length) ->
