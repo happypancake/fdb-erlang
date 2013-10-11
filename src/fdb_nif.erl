@@ -1,11 +1,11 @@
 -module(fdb_nif).
--compile([export_all]).
+-compile(export_all).
 
 init() ->
   try_load(["./fdb_drv","./priv/fdb_drv","../priv/fdb_drv"],nok).
   
 init(NifFile) ->
-  erlang:load_nif(NifFile,0).
+  eat_reload_error(erlang:load_nif(NifFile,0)).
   
 try_load([],LastErr) ->
   LastErr;
@@ -14,16 +14,22 @@ try_load([_],ok) ->
 try_load([H|T],_) ->
   try_load(T,init(H)).
 
+eat_reload_error({error,{reload,_}}) -> 
+  ok;
+eat_reload_error(X) ->
+  X.
+
+
 fdb_get_max_api_version(_)  ->
   nif_not_loaded.
 
-fdb_run_network(_)  ->
+fdb_run_network()  ->
   nif_not_loaded.
 
-fdb_setup_network(_)  ->
+fdb_setup_network()  ->
   nif_not_loaded.
 
-fdb_stop_network(_)  ->
+fdb_stop_network()  ->
   nif_not_loaded.
   
 fdb_transaction_add_conflict_range(_,_,_,_,_,_) ->
@@ -51,6 +57,9 @@ fdb_transaction_get_addresses_for_key(_,_,_) ->
   nif_not_loaded.
 
 fdb_transaction_watch(_,_,_) ->  
+  nif_not_loaded.
+
+fdb_create_cluster() ->
   nif_not_loaded.
 
 fdb_create_cluster(_cluster_file_path) ->
@@ -186,3 +195,11 @@ fdb_transaction_set_read_version(_tr, _version) ->
 fdb_transaction_watch(_tr, _key_name) ->
   nif_not_loaded.
 
+new_cluster()->
+  nif_not_loaded.
+
+new_database() ->
+  nif_not_loaded.
+
+new_transaction() ->
+  nif_not_loaded.
