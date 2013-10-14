@@ -2,76 +2,66 @@
 
 Erlang bindings for [FoundationDB](https://foundationdb.com/).
 
-This is currently still very early alpha.
+This is still very early alpha.
+
+## Todo
+
+- A non-VM-blocking `fdb_nif:fdb_future_block_until_ready` using `enif_send` and `fdb_future_set_callback`.
+- Conversion from Erlang terms to keys using [the FDB tuple layer](https://foundationdb.com/documentation/api-python.html#api-python-tuple-layer).
+- Map most-used functionality. (A lot of function calls return `not_implemented`.)
 
 ## Prerequisites
 
-Currently this is only tested on ubuntu.
-This requires you to have Erlang and [the FoundationDB client libraries installed](https://foundationdb.com/documentation/api-general.html#installing-client-binaries).
+Developed and tested on ubuntu only (for now).
+It requires you to have Erlang and [the FoundationDB client libraries installed](https://foundationdb.com/documentation/api-general.html#installing-client-binaries).
 
 ## Compilation and testing
 
-```
+```bash
 git clone git@github.com:HappyPancake/fdb-erlang.git
 cd fdb-erlang
 chmod u+x rebar
 ./rebar get-deps compile eunit -v
 ```
 
-This is the output
+## Example usage
+
+This is the simplest possible usage:
+```erlang
+tojans@ubuntu:/tmp/fdb-erlang$ erl -pa ebin
+Erlang R16B02 (erts-5.10.3) [source-5d89ddd] [64-bit] [async-threads:10] [kernel-poll:false]
+
+Eshell V5.10.3  (abort with ^G)
+1> fdb:init().
+ok
+2> fdb:api_version(100).
+0
+3> DB = fdb:open().
+{db,<<>>}
+4> fdb:get(DB,<<"Hello">>).
+not_found
+5> fdb:set(DB,<<"Hello">>,<<"World">>).
+ok
+6> fdb:get(DB,<<"Hello">>).            
+<<"World">>
+7> fdb:get(DB,<<"Hello2">>,some_default_value).
+some_default_value
+8> fdb:clear(DB,<<"Hello">>).
+ok
+9> fdb:get(DB,<<"Hello">>).
+not_found
+10>
 ```
-tojans@ubuntu:/tmp$ git clone git@github.com:HappyPancake/fdb-erlang.git
-Cloning into 'fdb-erlang'...
-remote: Counting objects: 154, done.
-remote: Compressing objects: 100% (122/122), done.
-remote: Total 154 (delta 66), reused 99 (delta 17)
-Receiving objects: 100% (154/154), 170.51 KiB, done.
-Resolving deltas: 100% (66/66), done.
-tojans@ubuntu:/tmp$ cd fdb-erlang/
-tojans@ubuntu:/tmp/fdb-erlang$ chmod u+x rebar
-tojans@ubuntu:/tmp/fdb-erlang$ ./rebar get-deps compile eunit -v
-WARN:  Expected /tmp/fdb-erlang/deps/gen_driver to be an app dir (containing ebin/*.app), but no .app found.
-==> fdb-erlang (get-deps)
-WARN:  Expected /tmp/fdb-erlang/deps/gen_driver to be an app dir (containing ebin/*.app), but no .app found.
-Pulling gen_driver from {git,"git://github.com/HappyPancake/generic-linked-in-driver.git",
-                             "master"}
-Cloning into 'gen_driver'...
-==> gen_driver (get-deps)
-==> gen_driver (compile)
-Compiled src/gen_driver_test.erl
-Compiled src/gen_driver.erl
-Compiling c_src/gen_driver.c
-Compiling c_src/gen_driver_test.c
-==> fdb-erlang (compile)
-Compiled src/fdb.erl
-Compiling c_src/fdb_drv.c
-==> gen_driver (eunit)
-Compiled src/gen_driver_test.erl
-Compiled src/gen_driver.erl
-Compiled test/basic_test.erl
-======================== EUnit ========================
-module 'basic_test'
-  basic_test: setup_and_teardown_test...[0.003 s] ok
-  basic_test: basic_test...[0.509 s] ok
-  [done in 0.517 s]
-module 'gen_driver'
-module 'gen_driver_test'
-=======================================================
-  All 2 tests passed.
-==> fdb-erlang (eunit)
-Compiled src/fdb.erl
-Compiled test/fdb_test.erl
-======================== EUnit ========================
-module 'fdb'
-module 'fdb_test'
-  fdb_test: api_version_test...[0.001 s] ok
-  fdb_test: setup_network_test...[0.001 s] ok
-  fdb_test: run_network_test...[0.001 s] ok
-  fdb_test: cluster_test...[0.001 s] ok
-  fdb_test: database_test...[0.001 s] ok
-  fdb_test: transaction_test...[0.003 s] ok
-  fdb_test: basic_storage_test...[0.013 s] ok
-  [done in 0.037 s]
-=======================================================
-  All 7 tests passed.
+
+If you want to have an atomic update(i.e. using a transaction), you need to invoke code like this:
+```erlang
+10> fdb:atomic(DB, fun(Tx) ->                         
+10>   fdb:set(Tx,<<"Hello">>,<<"World">>),            
+10>   fdb:set(Tx,<<"xyz">>,<<"abc">>),                
+10>   [fdb:get(Tx,<<"xyz">>)|fdb:get(Tx,<<"Hello">>)]   
+10> end).
+[<<"abc">>|<<"World">>]
+11>
 ```
+It will invoke the lambda multiple times until the whole action succeeds or it seems unreasonable to try any longer.
+If the code in the lambda crashes, the transaction will be rolled back.
