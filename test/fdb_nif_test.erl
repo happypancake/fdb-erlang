@@ -11,15 +11,8 @@
 
 -define (SO_FILE, "../priv/fdb_nif").
 
-api_version_test() ->
-  ?assertEqual(ok,fdb_nif:init(?SO_FILE)),
-  ?assertEqual(api_version_invalid,fdb_nif:fdb_get_error(fdb_nif:fdb_select_api_version(999))),
-  ?assertEqual(0, fdb_nif:fdb_select_api_version(?FDB_API_VERSION)),
-  ?assertEqual(api_version_already_set,fdb_nif:fdb_get_error(fdb_nif:fdb_select_api_version(?FDB_API_VERSION))).
-
 store_and_retrieve_test() ->
   AKey = "abc",
-  AValue = "xyz",
   
   ?assertEqual(ok,fdb_nif:init(?SO_FILE)),
   fdb_nif:fdb_setup_network(),
@@ -35,15 +28,6 @@ store_and_retrieve_test() ->
 
   {0, Transaction} = fdb_nif:fdb_database_create_transaction(Database),
 
-  fdb_nif:fdb_transaction_set(Transaction,AKey,AValue),
-  
   F3 = fdb_nif:fdb_transaction_get(Transaction,AKey),
   0 = fdb_nif:fdb_future_block_until_ready(F3),
-  {0, AValue} = fdb_nif:fdb_future_get_value(F3).
-
-
-
-
-
-
-
+  {0, not_found} = fdb_nif:fdb_future_get_value(F3).

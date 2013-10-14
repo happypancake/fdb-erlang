@@ -219,11 +219,11 @@ static ERL_NIF_TERM nif_fdb_future_get_database(ErlNifEnv* env, int argc, const 
 
 static ERL_NIF_TERM nif_fdb_future_get_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
+    enif_future_t *Future;
     if (argc!=1) return enif_make_badarg(env);
+    if (get_future(env,argv[0],&Future) == 0) return enif_make_badarg(env);
 
-    //  FDBFuture* f;
-
-    return error_not_implemented;
+    return enif_make_int(env,fdb_future_get_error(Future->handle));
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -448,13 +448,18 @@ static ERL_NIF_TERM nif_fdb_transaction_cancel(ErlNifEnv* env, int argc, const E
 
 static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=3) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary Key;
 
-    //  FDBTransaction* tr;
-    //  uint8_t const* key_name;
-    //  int key_name_length;
+    if (argc!=2) return enif_make_badarg(env);
+    if (get_transaction(env,argv[0],&Tx) == 0) return enif_make_badarg(env);
+    if (enif_inspect_binary(env,argv[1],&Key) == 0
+            && enif_inspect_iolist_as_binary(env,argv[2], &Key) == 0) return enif_make_badarg(env);
 
-    return error_not_implemented;
+    fdb_transaction_clear(Tx->handle,Key.data,Key.size);
+
+    return atom_ok;
+
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_clear_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -472,11 +477,12 @@ static ERL_NIF_TERM nif_fdb_transaction_clear_range(ErlNifEnv* env, int argc, co
 
 static ERL_NIF_TERM nif_fdb_transaction_commit(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
+    enif_transaction_t *Tx;
+
     if (argc!=1) return enif_make_badarg(env);
+    if (get_transaction(env,argv[0],&Tx)==0) return enif_make_badarg(env);
 
-    //  FDBTransaction* tr;
-
-    return error_not_implemented;
+    return mk_and_release_resource(env,wrap_future(fdb_transaction_commit(Tx->handle)));
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_destroy(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -592,12 +598,15 @@ static ERL_NIF_TERM nif_fdb_transaction_get_read_version(ErlNifEnv* env, int arg
 
 static ERL_NIF_TERM nif_fdb_transaction_on_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
+
+    enif_transaction_t* Tx;
+    fdb_error_t error;
     if (argc!=2) return enif_make_badarg(env);
+    if (get_transaction(env,argv[0],&Tx)==0) return enif_make_badarg(env);
+    if (enif_get_int(env,argv[1],&error)==0) return enif_make_badarg(env);
 
-    //  FDBTransaction* tr;
-    //  fdb_error_t error;
-
-    return error_not_implemented;
+    
+    return mk_and_release_resource(env,wrap_future(fdb_transaction_on_error(Tx->handle,error)));
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_reset(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -716,7 +725,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_add_conflict_range", 6, nif_fdb_transaction_add_conflict_range},
     {"fdb_transaction_atomic_op", 6, nif_fdb_transaction_atomic_op},
     {"fdb_transaction_cancel", 1, nif_fdb_transaction_cancel},
-    {"fdb_transaction_clear", 3, nif_fdb_transaction_clear},
+    {"fdb_transaction_clear", 2, nif_fdb_transaction_clear},
     {"fdb_transaction_clear_range", 5, nif_fdb_transaction_clear_range},
     {"fdb_transaction_commit", 1, nif_fdb_transaction_commit},
     {"fdb_transaction_destroy", 1, nif_fdb_transaction_destroy},

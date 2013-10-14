@@ -1,77 +1,85 @@
 -module(fdb).
--export([start_link/2]).
--export([api_version/2,open/0,open/1]).
+-export([init/0,init/1]).
+-export([api_version/1,open/0]).
 -export([get/2,get/3,set/3]).
--export([clear/2,commit/1,close/1]).
+-export([clear/2]).
 -export([atomic/2]).
 
 -define (FDB_API_VERSION, 21).
 
-start_link(SoFolder,SoPath) ->
-  fdb_core:start_link(SoFolder,SoPath).
+init(SoFile) -> fdb_nif:init(SoFile).
 
-api_version(FDB,Version) when Version>0 ->
-  fdb_core:api_version(FDB,Version).
+init() ->
+  init("priv/fdb_nif").
+
+
+
+api_version(Version) when Version>0 ->
+  fdb_nif:fdb_select_api_version(Version).
 
 open() ->
-  {ok,FDB} = try_start_link([".","priv","../priv"]),
-  fdb:api_version(FDB,?FDB_API_VERSION),
-  fdb:open(FDB).
+  fdb_nif:fdb_setup_network(),
+  fdb_nif:fdb_run_network(),
+  F1 =  fdb_nif:fdb_create_cluster(),
+  0 = fdb_nif:fdb_future_block_until_ready(F1),
+  0 = fdb_nif:fdb_future_get_error(F1),
+  {0,Cluster} = fdb_nif:fdb_future_get_cluster(F1),
+  F2 =  fdb_nif:fdb_cluster_create_database(Cluster),
+  0 = fdb_nif:fdb_future_block_until_ready(F2),
+  0 = fdb_nif:fdb_future_get_error(F2),
+  {0, Database} = fdb_nif:fdb_future_get_database(F2),
+  {db,Database}.
 
-try_start_link([]) ->
-  {error,"unable_to_load_so_file"};
-try_start_link([Folder|T]) ->
-    Result = fdb:start_link(Folder,"test"),
-    case Result of
-      {ok,_Pid} -> Result;
-      {error,{open_error,-10}} -> try_start_link(T); 
-      {error,bad_driver_name} -> try_start_link(T) 
-    end.
+get(Context, Key) ->
+   get(Context, Key, not_found).
 
-open(FDB) ->
-  fdb_core:setup_network(FDB),
-  fdb_core:run_network(FDB),
-  Cluster = fdb_core:create_cluster(FDB),
-  DB = fdb_core:cluster_create_database(Cluster),
-  Tx = fdb_core:database_create_transaction(DB),
-  {Tx,{DB,{Cluster}}}.
-
-get(Handle={{_Pid,tx,_TxHandle},_Parent},Key) ->
-  get(Handle,Key,not_found).
-
-
-get({Tx={_Pid,tx,_TxHandle},_Parent},Key,Default) ->
-  Result = fdb_core:transaction_get(Tx,term_to_binary(Key),Default),
+get({db,Database},Key,DefaultValue) ->
+  {0,Tx} = fdb_nif:fdb_database_create_transaction(Database),  
+  get({tx,Tx},Key,DefaultValue);
+get({tx,Tx},Key,DefaultValue) ->
+    F1 = fdb_nif:fdb_transaction_get(Tx, Key),
+    0 = fdb_nif:fdb_future_block_until_ready(F1),
+    0 = fdb_nif:fdb_future_get_error(F1),
+    {0, Result} = fdb_nif:fdb_future_get_value(F1),
   case Result of
-    Default -> Default;
-    {error,_} -> Result;
-    _ -> binary_to_term(Result)
+    not_found -> DefaultValue;
+    _ -> Result
   end.
 
-set({Tx={_Pid,tx,_TxHandle},_Parent},Key,Value) ->
-  fdb_core:transaction_set(Tx,term_to_binary(Key),term_to_binary(Value)).
+set({db,Database},Key,Value) ->
+  atomic({db,Database}, fun (Tx)-> set(Tx,Key,Value) end);
+set({tx,Tx},Key,Value) ->
+  fdb_nif:fdb_transaction_set(Tx,Key,Value).
 
-clear({Tx={_Pid,tx,_TxHandle},_Parent},Key) ->
-  fdb_core:transaction_clear(Tx,term_to_binary(Key)).
+clear({db,Database},Key) ->
+  atomic({db,Database}, fun (Tx)-> clear(Tx,Key) end);
+clear({tx,Tx},Key) ->
+  fdb_nif:fdb_transaction_clear(Tx,Key).
 
-commit({Tx={_Pid,tx,_TxHandle},_Parent}) -> 
-  commit(Tx);
-commit(Tx={_Pid,tx,_TxHandle}) -> 
-  fdb_core:transaction_commit(Tx).
 
-close({Tx={_Pid,tx,_TxHandle},{Database,{Cluster}}}) ->
-  fdb_core:transaction_commit(Tx),
-  fdb_core:transaction_destroy(Tx),
-  fdb_core:database_destroy(Database),
-  fdb_core:cluster_destroy(Cluster).
 
-atomic({{_Pid,tx,_TxHandle},WR = {Database,{_Cluster}}},SomeFunc) ->
-  Tx = fdb_core:database_create_transaction(Database),
-  try
-    SomeFunc({Tx,WR}),
-    fdb_core:transaction_commit(Tx)
-  catch
-    Exception:Reason -> {error,Exception,Reason}
-  after
-    fdb_core:transaction_destroy(Tx)
-  end.
+atomic({db, Database}, DoStuff) ->
+  Result = try_atomic_operation(Database, DoStuff),
+  process_commit_result(Result,Database, DoStuff).
+
+process_commit_result({0,Result,_Tx},_Database,_DoStuff) ->
+    Result;
+process_commit_result({Err,_Result,Tx}, Database,DoStuff) ->
+ F1 = fdb_nif:fdb_transaction_on_error(Tx,Err),
+ 0 = fdb_nif:fdb_future_block_until_ready(F1),
+ ErrResult = fdb_nif:fdb_future_get_error(F1),
+ retry_atomic_op(ErrResult, Database, DoStuff).
+
+retry_atomic_op(0, Database, DoStuff) ->
+  atomic({db,Database}, DoStuff);
+retry_atomic_op(Error, _Database, _DoStuff) ->
+  Error.
+
+try_atomic_operation(Database, DoStuff) ->
+  {0,Tx} = fdb_nif:fdb_database_create_transaction(Database),
+  Result = DoStuff({tx,Tx}),
+  F1 = fdb_nif:fdb_transaction_commit(Tx),
+  0 = fdb_nif:fdb_future_block_until_ready(F1),
+  Err = fdb_nif:fdb_future_get_error(F1),
+  {Err,Result,Tx}.
+
