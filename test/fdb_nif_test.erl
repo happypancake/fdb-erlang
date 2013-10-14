@@ -18,13 +18,32 @@ api_version_test() ->
   ?assertEqual(api_version_already_set,fdb_nif:fdb_get_error(fdb_nif:fdb_select_api_version(?FDB_API_VERSION))).
 
 store_and_retrieve_test() ->
+  AKey = "abc",
+  AValue = "xyz",
+  
   ?assertEqual(ok,fdb_nif:init(?SO_FILE)),
   fdb_nif:fdb_setup_network(),
   fdb_nif:fdb_run_network(),
-  FCluster = fdb_nif:fdb_create_cluster(),
-  0 = fdb_nif:fdb_future_block_until_ready(FCluster),
-  Cluster = fdb_nif:new_cluster(),
-  0 = fdb_nif:fdb_future_get_cluster(FCluster,Cluster),
-  Database = fdb_nif:new_database().
+
+  F1 = fdb_nif:fdb_create_cluster(),
+  0 = fdb_nif:fdb_future_block_until_ready(F1),
+  {0, Cluster} = fdb_nif:fdb_future_get_cluster(F1),
+
+  F2 = fdb_nif:fdb_cluster_create_database(Cluster),
+  0 = fdb_nif:fdb_future_block_until_ready(F2),
+  {0, Database} = fdb_nif:fdb_future_get_database(F2),
+
+  {0, Transaction} = fdb_nif:fdb_database_create_transaction(Database),
+
+  fdb_nif:fdb_transaction_set(Transaction,AKey,AValue),
+  
+  F3 = fdb_nif:fdb_transaction_get(Transaction,AKey),
+  0 = fdb_nif:fdb_future_block_until_ready(F3),
+  {0, AValue} = fdb_nif:fdb_future_get_value(F3).
+
+
+
+
+
 
 
