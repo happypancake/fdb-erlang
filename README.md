@@ -53,9 +53,9 @@ not_found
 10>
 ```
 
-If you want to have an atomic update(i.e. using a transaction), you need to invoke code like this:
+If you want to have a transaction, you need to invoke code like this:
 ```erlang
-10> fdb:atomic(DB, fun(Tx) ->                         
+10> fdb:transact(DB, fun(Tx) ->                         
 10>   fdb:set(Tx,<<"Hello">>,<<"World">>),            
 10>   fdb:set(Tx,<<"xyz">>,<<"abc">>),                
 10>   [fdb:get(Tx,<<"xyz">>)|fdb:get(Tx,<<"Hello">>)]   
