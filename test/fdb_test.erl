@@ -10,20 +10,21 @@ hello_world_test() ->
   DB = fdb:open(),
   AKey = <<"Hello">>,
   AValue = <<"World">>,
-  ok = fdb:set(DB,AKey,AValue),
-  AValue = fdb:get(DB,AKey),
-  ok = fdb:clear(DB,AKey),
-  not_found = fdb:get(DB,AKey).
+  ok = fdb:set(DB, AKey, AValue),
+  AValue = fdb:get(DB, AKey),
+  ok = fdb:clear(DB, AKey),
+  not_found = fdb:get(DB, AKey).
 
-atomic_test_todo() ->
+transaction_test() ->
   fdb:init(?SOLIB),
   fdb:api_version(100),
   DB = fdb:open(),
   AKey = <<"abc">>,
   AValue = <<"xyz">>,
-  not_found = fdb:get(DB,AKey),
-  fdb:atomic(DB,fun(Tx)->
-        fdb:set(Tx,AKey,AValue)
+  fdb:clear(DB, AKey),
+  not_found = fdb:get(DB, AKey),
+  fdb:transact(DB, fun(Tx)->
+        fdb:set(Tx, AKey, AValue)
     end),
-  not_found = fdb:get(DB,AKey).
+  ?assertEqual(AValue, fdb:get(DB, AKey)).
 
