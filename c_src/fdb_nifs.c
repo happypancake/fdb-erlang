@@ -458,7 +458,7 @@ static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ER
 
     fdb_transaction_clear(Tx->handle,Key.data,Key.size);
 
-    return atom_ok;
+    return enif_make_int(env, 0);
 
 }
 
@@ -631,7 +631,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set(ErlNifEnv* env, int argc, const ERL_
 
     fdb_transaction_set(Tx->handle,Key.data, Key.size, Value.data, Value.size);
 
-    return atom_ok;
+    return enif_make_int(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])

@@ -7,7 +7,9 @@
 hello_world_test() ->
   fdb:init(?SOLIB),
   fdb:api_version(100),
-  DB = fdb:open(),
+  DBR = fdb:open(),
+  io:format("DBR ~p~n",[DBR]),
+  {ok, DB} = DBR, 
   AKey = <<"Hello">>,
   AValue = <<"World">>,
   ok = fdb:set(DB, AKey, AValue),
@@ -18,10 +20,10 @@ hello_world_test() ->
 transaction_test() ->
   fdb:init(?SOLIB),
   fdb:api_version(100),
-  DB = fdb:open(),
+  {ok, DB} = fdb:open(),
   AKey = <<"abc">>,
   AValue = <<"xyz">>,
-  fdb:clear(DB, AKey),
+  ok = fdb:clear(DB, AKey),
   not_found = fdb:get(DB, AKey),
   fdb:transact(DB, fun(Tx)->
         fdb:set(Tx, AKey, AValue)
