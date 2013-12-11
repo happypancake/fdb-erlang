@@ -56,7 +56,7 @@ clear({tx, Tx}, Key) ->
 
 transact({db, Database}, DoStuff) ->
   Result = try_transact_operation(Database, DoStuff),
-  process_commit_result(Result, Database, DoStuff).
+  handle_commit_result(Result, Database, DoStuff).
 
 try_transact_operation(Database, DoStuff) ->
   {0, Tx} = fdb_nif:fdb_database_create_transaction(Database),
@@ -66,9 +66,9 @@ try_transact_operation(Database, DoStuff) ->
   Err = fdb_nif:fdb_future_get_error(F1),
   {Err, Result, Tx}.
 
-process_commit_result({0, Result, _Tx}, _Database, _DoStuff) ->
+handle_commit_result({0, Result, _Tx}, _Database, _DoStuff) ->
   Result;
-process_commit_result({Err, _Result, Tx}, Database, DoStuff) ->
+handle_commit_result({Err, _Result, Tx}, Database, DoStuff) ->
   F1 = fdb_nif:fdb_transaction_on_error(Tx, Err),
   0 = fdb_nif:fdb_future_block_until_ready(F1),
   ErrResult = fdb_nif:fdb_future_get_error(F1),
