@@ -11,7 +11,7 @@ pack_test() ->
   ?assertPacked(<<1,3,"Hello",0,255,0>>, [<<"Hello">>]),
   ?assertPacked(<<1,3,"A",0,255,3,"B",0,255,0>>, [<<"A">>,<<"B">>]),
   ?assertPacked(<<40,0>>, 0),
-  ?assertPacked(<<40,0>>, 0.0),
+  ?assertPacked(<<4,0.0/float,0>>, 0.0),
   ?assertPacked(<<41,16,0>>, 16),
   ?assertPacked(<<39,240,0>>, -16),
   ?assertPacked(<<43,70000:24,0>>, 70000),

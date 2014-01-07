@@ -1,6 +1,5 @@
 -module(tuple).
--compile([export_all]).
-%%-export([pack/1, unpack/1]).
+-export([pack/1, unpack/1]).
 
 -define(TERMINATOR,0).
 -define(LIST, 1).
@@ -19,10 +18,9 @@ pack(Data) when is_tuple(Data) ->
 pack(Data) when is_binary(Data) ->
   <<?BINARY, (escape_terminator(Data))/binary, ?TERMINATOR>>;
 %% use == 0, so it works for both ints and floats
-pack(N) when N == 0 -> <<?INTEGER, ?TERMINATOR>>;
+pack(0) -> <<?INTEGER, ?TERMINATOR>>;
 pack(N) when is_integer(N) -> number(N);
-pack(N) when is_float(N) -> <<?FLOAT, N/float, 0>>.
-  
+pack(N) when is_float(N) -> <<?FLOAT, N/float, ?TERMINATOR>>.
 
 unpack(<<?FLOAT, Val/float, ?TERMINATOR>>) -> Val;
 unpack(<<?BINARY, Remainder/binary>>) ->
