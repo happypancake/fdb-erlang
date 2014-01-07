@@ -1,5 +1,6 @@
 -module(tuple).
--export([pack/1, unpack/1]).
+-compile([export_all]).
+%%-export([pack/1, unpack/1]).
 
 -define(TERMINATOR,0).
 -define(LIST, 1).
@@ -7,14 +8,14 @@
 -define(BINARY, 3).
 -define(FLOAT, 4).
 -define(INTEGER, 40).
--define(ESCAPE, 256).
+-define(ESCAPE, 255).
 
 pack([]) ->
   <<?TERMINATOR>>; 
 pack(Data) when is_list(Data) ->
-  <<(encode_range(Data, <<?LIST>>))/binary, ?TERMINATOR>>;
+  <<?LIST, (encode_range(Data,<<>>))/binary, ?TERMINATOR>>;
 pack(Data) when is_tuple(Data) ->
-  <<(encode_range(tuple_to_list(Data), <<?TUPLE>>))/binary, ?TERMINATOR>>;
+  <<?TUPLE, (encode_range(tuple_to_list(Data), <<>>))/binary, ?TERMINATOR>>;
 pack(Data) when is_binary(Data) ->
   <<?BINARY, (escape_terminator(Data))/binary, ?TERMINATOR>>;
 %% use == 0, so it works for both ints and floats
@@ -22,18 +23,62 @@ pack(N) when N == 0 -> <<?INTEGER, ?TERMINATOR>>;
 pack(N) when is_integer(N) -> number(N);
 pack(N) when is_float(N) -> <<?FLOAT, N/float, 0>>.
   
-unpack(<<?INTEGER, ?TERMINATOR>>) -> 0;
+
 unpack(<<?FLOAT, Val/float, ?TERMINATOR>>) -> Val;
 unpack(<<?BINARY, Remainder/binary>>) ->
-  ?TERMINATOR = binary:last(Remainder),
-  Part = binary:part(Remainder, 0, byte_size(Remainder)-1),
-  unescape_terminator(Part).
-  
+  Part = verify_and_extract(Remainder),
+  unescape_terminator(Part);
+unpack(<<?LIST, Remainder/binary>>) ->
+  Part = verify_and_extract(Remainder),
+  Unescaped = unescape_terminator(Part),
+  Splitted = split_on_terminator(Unescaped),
+  lists:map(fun unpack/1, Splitted);
+unpack(<<?TUPLE, Remainder/binary>>) ->
+  Part = verify_and_extract(Remainder),
+  Unescaped = unescape_terminator(Part),
+  Splitted = split_on_terminator(Unescaped),
+  List = lists:map(fun unpack/1, Splitted),
+  list_to_tuple(List);
+%% Erlang pattern matching should be faster
+unpack(<<?INTEGER, ?TERMINATOR>>) -> 0;
+unpack(<<(?INTEGER+1):8, V:08,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+2):8, V:16,?TERMINATOR>>) -> V; 
+unpack(<<(?INTEGER+3):8, V:24,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+4):8, V:32,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+5):8, V:40,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+6):8, V:48,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+7):8, V:52,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+8):8, V:64,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER+9):8, V:72,?TERMINATOR>>) -> V;
+unpack(<<(?INTEGER-1):8, V:08,?TERMINATOR>>) -> 16#100 - V;
+unpack(<<(?INTEGER-2):8, V:16,?TERMINATOR>>) -> 16#10000 - V; 
+unpack(<<(?INTEGER-3):8, V:24,?TERMINATOR>>) -> 16#1000000 - V;
+unpack(<<(?INTEGER-4):8, V:32,?TERMINATOR>>) -> 16#100000000 - V;
+unpack(<<(?INTEGER-5):8, V:40,?TERMINATOR>>) -> 16#10000000000 - V;
+unpack(<<(?INTEGER-6):8, V:48,?TERMINATOR>>) -> 16#1000000000000 - V;
+unpack(<<(?INTEGER-7):8, V:52,?TERMINATOR>>) -> 16#100000000000000 - V;
+unpack(<<(?INTEGER-8):8, V:64,?TERMINATOR>>) -> 16#10000000000000000 - V;
+unpack(<<(?INTEGER-9):8, V:72,?TERMINATOR>>) -> 16#1000000000000000000 - V.
+
+verify_and_extract(Data) ->
+  ?TERMINATOR = binary:last(Data),
+  binary:part(Data, 0, byte_size(Data)-1).
+
+split_on_terminator(Data) ->
+  Splitted = binary:split(Data,<<?TERMINATOR>>,[global,trim]),
+  join_escaped_splits(Splitted,[]).
+
+join_escaped_splits([],Result) ->
+  lists:reverse(Result);
+join_escaped_splits([<<?ESCAPE,Data/binary>>|Todo], [H|T]) ->
+  join_escaped_splits(Todo,[<<H/binary,?TERMINATOR,Data/binary>>|T]);
+join_escaped_splits([H|T],R) ->
+  join_escaped_splits(T,[<<H/binary,?TERMINATOR>> | R]).
   
 encode_range([], Result) ->
   escape_terminator(Result);
-encode_range([H|T], Result) ->
-  encode_range(T,<<Result/binary,(pack(H))/binary>>).
+encode_range([H|T], R) ->
+  encode_range(T,<<R/binary,(pack(H))/binary>>).
 
 escape_terminator(Data) ->
   binary:replace(Data, <<?TERMINATOR>>, <<?TERMINATOR, ?ESCAPE>>,[global]).

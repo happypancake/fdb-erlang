@@ -7,9 +7,9 @@
 
 pack_test() ->
   ?assertPacked(<<3, "Hello world", 0>>, <<"Hello world">>),
-  ?assertPacked(<<3, "Hello", 0, 256, "world", 0>>, <<"Hello",0,"world">>),
-  ?assertPacked(<<1,3,"Hello",0,256,0>>, [<<"Hello">>]),
-  ?assertPacked(<<1,3,"A",0,256,3,"B",0,256,0>>, [<<"A">>,<<"B">>]),
+  ?assertPacked(<<3, "Hello", 0, 255, "world", 0>>, <<"Hello",0,"world">>),
+  ?assertPacked(<<1,3,"Hello",0,255,0>>, [<<"Hello">>]),
+  ?assertPacked(<<1,3,"A",0,255,3,"B",0,255,0>>, [<<"A">>,<<"B">>]),
   ?assertPacked(<<40,0>>, 0),
   ?assertPacked(<<40,0>>, 0.0),
   ?assertPacked(<<41,16,0>>, 16),
@@ -25,6 +25,7 @@ unpack_test() ->
   ?assertPackUnpack(<<"Hello world">>),
   ?assertPackUnpack(<<"Hello",0,"world">>),
   ?assertPackUnpack(0),
-  ?assertPackUnpack(1.1).
+  ?assertPackUnpack(1.1),
+  ?assertPackUnpack({<<"Hello">>, 1.1, 5}).
 
 
