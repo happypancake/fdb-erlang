@@ -66,7 +66,7 @@ get(FdbHandle, Key) -> get(FdbHandle, Key, not_found).
 get(DB={db, _Database}, Key, DefaultValue) ->
   transact(DB, fun(Tx) -> get(Tx, Key, DefaultValue) end);
 get({tx, Tx}, Key, DefaultValue) ->
-  GetF = fdb_nif:fdb_transaction_get(Tx, Key),
+  GetF = fdb_nif:fdb_transaction_get(Tx, tuple:pack(Key)),
   {ok, Result} = future_get(GetF, value),
   case Result of
     not_found -> DefaultValue;
@@ -80,7 +80,7 @@ get({tx, Tx}, Key, DefaultValue) ->
 set({db, Database}, Key, Value) ->
   transact({db, Database}, fun (Tx)-> set(Tx, Key, Value) end);
 set({tx, Tx}, Key, Value) ->
-  ErrCode = fdb_nif:fdb_transaction_set(Tx, Key, Value),
+  ErrCode = fdb_nif:fdb_transaction_set(Tx, tuple:pack(Key), Value),
   handle_fdb_result(ErrCode).
 
 %% @doc Clears a key and it's value
@@ -89,7 +89,7 @@ set({tx, Tx}, Key, Value) ->
 clear({db, Database}, Key) ->
   transact({db, Database}, fun (Tx)-> clear(Tx, Key) end);
 clear({tx, Tx}, Key) ->
-  ErrCode = fdb_nif:fdb_transaction_clear(Tx, Key),
+  ErrCode = fdb_nif:fdb_transaction_clear(Tx, tuple:pack(Key)),
   handle_fdb_result(ErrCode).
 
 transact({db, DbHandle}, DoStuff) ->

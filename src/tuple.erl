@@ -22,8 +22,13 @@ pack(N) when N == 0 -> <<?INTEGER, ?TERMINATOR>>;
 pack(N) when is_integer(N) -> number(N);
 pack(N) when is_float(N) -> <<?FLOAT, N/float, 0>>.
   
-unpack(_) ->
-  undefined.  
+unpack(<<?INTEGER, ?TERMINATOR>>) -> 0;
+unpack(<<?FLOAT, Val/float, ?TERMINATOR>>) -> Val;
+unpack(<<?BINARY, Remainder/binary>>) ->
+  ?TERMINATOR = binary:last(Remainder),
+  Part = binary:part(Remainder, 0, byte_size(Remainder)-1),
+  unescape_terminator(Part).
+  
   
 encode_range([], Result) ->
   escape_terminator(Result);
@@ -32,6 +37,10 @@ encode_range([H|T], Result) ->
 
 escape_terminator(Data) ->
   binary:replace(Data, <<?TERMINATOR>>, <<?TERMINATOR, ?ESCAPE>>,[global]).
+
+unescape_terminator(Data) ->
+  binary:replace(Data, <<?TERMINATOR, ?ESCAPE>>, <<?TERMINATOR>>, [global]).
+
 
 number(N) ->
   ByteCount = numbersize(N),

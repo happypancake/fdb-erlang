@@ -7,9 +7,7 @@
 hello_world_test() ->
   fdb:init(?SOLIB),
   fdb:api_version(100),
-  DBR = fdb:open(),
-  io:format("DBR ~p~n",[DBR]),
-  {ok, DB} = DBR, 
+  {ok, DB} = fdb:open(),
   AKey = <<"Hello">>,
   AValue = <<"World">>,
   ok = fdb:set(DB, AKey, AValue),
