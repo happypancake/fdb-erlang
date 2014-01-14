@@ -730,8 +730,8 @@ void send_message_callback(FDBFuture* f,void* enifF)
 {
     enif_future_t* ctx = (enif_future_t*)enifF;
     enif_send(NULL, &(ctx->callback_pid),ctx->callback_env,ctx->callback_msg);  
-   // enif_free_env(ctx->callback_env);
-   // ctx->callback_env = NULL;
+    enif_free_env(ctx->callback_env);
+    ctx->callback_env = NULL;
 }
 
 static ErlNifFunc nifs[] =
