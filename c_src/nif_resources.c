@@ -48,6 +48,7 @@ enif_future_t* wrap_future(FDBFuture *f)
     ctx =(enif_future_t*)
          enif_alloc_resource(FUTURE_RESOURCE,sizeof(enif_future_t));
     ctx->handle = f;
+    ctx->callback_env = NULL;
     return ctx;
 }
 
@@ -57,7 +58,8 @@ void cleanup_network(ErlNifEnv* env, void* obj)
     if (ctx == NULL) return;
     if (ctx->is_running) {
         fdb_stop_network();
-        pthread_join( ctx->thread, NULL );
+        //pthread_join( ctx->thread, NULL );
+        enif_thread_join(ctx->tid, NULL);
         ctx->is_running = 0;
     }
 }
@@ -103,6 +105,10 @@ void cleanup_future(ErlNifEnv* env, void* obj)
     {
         fdb_future_destroy(ctx->handle);
         ctx->handle = NULL;
+    }
+    if (ctx->callback_env != NULL)
+    {
+        enif_free_env(ctx->callback_env);
     }
 }
 

@@ -189,3 +189,6 @@ new_database() ->
 
 new_transaction() ->
   nif_not_loaded.
+
+send_on_complete(_Future,_Pid,_Message) ->
+  nif_not_loaded.

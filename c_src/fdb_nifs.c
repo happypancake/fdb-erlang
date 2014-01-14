@@ -9,6 +9,8 @@ static ERL_NIF_TERM atom_ok;
 static ERL_NIF_TERM atom_error;
 static ERL_NIF_TERM atom_not_found;
 static ERL_NIF_TERM atom_undefined;
+static ERL_NIF_TERM atom_true;
+static ERL_NIF_TERM atom_false;
 static ERL_NIF_TERM error_not_implemented;
 
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
@@ -38,6 +40,8 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
 {
     atom_ok = enif_make_atom(env, "ok");
     atom_error = enif_make_atom(env, "error");
+    atom_true = enif_make_atom(env, "true");
+    atom_false = enif_make_atom(env, "false");
     atom_not_found = enif_make_atom(env,"not_found");
     atom_undefined = enif_make_atom(env,"undefined");
     error_not_implemented = mk_error(env,"not_implemented");
@@ -312,11 +316,18 @@ static ERL_NIF_TERM nif_fdb_future_is_error(ErlNifEnv* env, int argc, const ERL_
 
 static ERL_NIF_TERM nif_fdb_future_is_ready(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
+    enif_future_t *f; 
     if (argc!=1) return enif_make_badarg(env);
+    if (get_future(env,argv[0],&f) == 0) return enif_make_badarg(env);
 
-    //  FDBFuture* f;
-
-    return error_not_implemented;
+    if(fdb_future_is_ready(f->handle))
+    {
+       return atom_true;
+    }
+    else
+    {
+       return atom_false;
+    }
 }
 
 static ERL_NIF_TERM nif_fdb_future_release_memory(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -374,10 +385,18 @@ static ERL_NIF_TERM nif_fdb_run_network(ErlNifEnv* env, int argc, const ERL_NIF_
 {
     if (argc!=0) return enif_make_badarg(env);
     if (network->is_running) return mk_error(env,"network_already_running");
-    pthread_create( &(network->thread),NULL, (void* (*)(void*))fdb_run_network,NULL);
+    if (enif_thread_create("", &(network->tid), thr_event_loop, NULL,NULL)!=0) {
+        return mk_error(env,"error launching network thread");
+    }
+    //pthread_create( &(network->thread),NULL, (void* (*)(void*))fdb_run_network,NULL);
     enif_make_resource(env,network);
     network->is_running = 1;
     return atom_ok;
+}
+
+static void thr_event_loop(void* obj)
+{
+    fdb_run_network();
 }
 
 static ERL_NIF_TERM nif_fdb_select_api_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -688,6 +707,33 @@ static ERL_NIF_TERM nif_new_transaction(ErlNifEnv* env, int argc, const ERL_NIF_
     return mk_and_release_resource(env,wrap_transaction(NULL));
 }
 
+void send_message_callback(FDBFuture* f,void* nothing);
+
+
+static ERL_NIF_TERM send_on_complete(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
+{
+    enif_future_t *f;
+    int errcode = 0;
+    
+    if (argc!=3) return enif_make_badarg(env);
+    if (get_future(env,argv[0],&f) == 0) return enif_make_badarg(env);
+    if (enif_get_local_pid(env, argv[1], &(f->callback_pid))==0) 
+       return enif_make_badarg(env);
+
+    f->callback_env = enif_alloc_env();
+    f->callback_msg = enif_make_copy(f->callback_env, argv[2]);
+    errcode = fdb_future_set_callback(f->handle, send_message_callback, f);
+    return enif_make_int(env,errcode);
+}
+
+void send_message_callback(FDBFuture* f,void* enifF)
+{
+    enif_future_t* ctx = (enif_future_t*)enifF;
+    enif_send(NULL, &(ctx->callback_pid),ctx->callback_env,ctx->callback_msg);  
+   // enif_free_env(ctx->callback_env);
+   // ctx->callback_env = NULL;
+}
+
 static ErlNifFunc nifs[] =
 {
     {"fdb_cluster_configure_database", 0, nif_fdb_cluster_configure_database},
@@ -744,7 +790,8 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_watch", 3, nif_fdb_transaction_watch},
     {"new_cluster", 0, nif_new_cluster},
     {"new_database", 0, nif_new_database},
-    {"new_transaction", 0, nif_new_transaction}
+    {"new_transaction", 0, nif_new_transaction},
+    {"send_on_complete",3, send_on_complete}
 };
 
 

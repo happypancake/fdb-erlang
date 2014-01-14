@@ -9,6 +9,7 @@
 
 typedef struct {
     pthread_t thread;
+    ErlNifTid tid;
     int is_running;
 } enif_network_t;
 
@@ -26,6 +27,9 @@ typedef struct {
 
 typedef struct {
     FDBFuture* handle;
+    ErlNifEnv* callback_env;
+    ErlNifPid  callback_pid;
+    ERL_NIF_TERM callback_msg;
 } enif_future_t;
 
 enif_network_t* wrap_network();

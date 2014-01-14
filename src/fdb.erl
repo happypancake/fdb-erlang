@@ -7,6 +7,8 @@
 
 -define (FDB_API_VERSION, 21).
 
+-define (FUTURE_TIMEOUT, 5000).
+
 -type fdb_version() :: pos_integer().
 -type fdb_errorcode() :: pos_integer().
 -type fdb_cmd_result() :: ok | {error, fdb_errorcode()}.
@@ -121,8 +123,20 @@ future(F) -> future_get(F, none).
 
 future_get(F, FQuery) -> 
   FullQuery = list_to_atom("fdb_future_get_" ++ atom_to_list(FQuery)),
-  ErrCode = fdb_nif:fdb_future_block_until_ready(F),
+  ok = wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)),
+  ErrCode = 0, %% no longer needed
   check_future_error(ErrCode, F, FullQuery).
+
+wait_non_blocking(F, false) ->
+  Ref = make_ref(),
+  0 = fdb_nif:send_on_complete(F,self(),Ref),
+  receive
+    Ref -> ok
+    after ?FUTURE_TIMEOUT -> timeout
+  end;
+wait_non_blocking(F, true) ->
+  ok.
+ 
 
 check_future_error(0, F, FQuery) ->
   ErrCode = fdb_nif:fdb_future_get_error(F),
