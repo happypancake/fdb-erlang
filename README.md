@@ -18,9 +18,11 @@ It requires you to have Erlang and [the FoundationDB client libraries installed]
 Due to the way `enif_send` is implemented in Erlang `NIF`s, your system needs to run with at least 2 core's.
 
 #### Update
-Apparently you can also [work around this]() by using `erl -smp enable`.
+Apparently you can also work around this() by using `erl -smp enable`.
 <blockquote class="twitter-tweet" lang="nl"><p><a href="https://twitter.com/ToJans">@ToJans</a> It works ok, but you need enable it explicitly (via -smp enable), and of course it&#39;s suboptimal (better than crashing though).</p>&mdash; Valery Meleshkin (@sum3rman) <a href="https://twitter.com/sum3rman/statuses/423196490773721088">14 januari 2014</a></blockquote>
 <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+Big thanks to [Valery Meleshkin](https://twitter.com/sum3rman) for the tip!
 
 ## Compilation and testing
 
