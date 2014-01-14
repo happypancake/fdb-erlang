@@ -15,8 +15,7 @@ This is still very early alpha.
 Developed and tested on ubuntu only (for now).
 It requires you to have Erlang and [the FoundationDB client libraries installed](https://foundationdb.com/documentation/api-general.html#installing-client-binaries).
 
-Due to the way `enif_send` is implemented in Erlang `NIF`s, you also need a machine with at least 2 CPU's.
-(Might be an issue when you use a virtualized machine.)
+Due to the way `enif_send` is implemented in Erlang `NIF`s, you also need a machine with at least 2 Core's.
 
 ## Compilation and testing
 
