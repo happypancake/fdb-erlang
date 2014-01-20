@@ -17,6 +17,10 @@
 -type fdb_transaction() :: {tx, term()}.
 -type fdb_handle() :: fdb_database() | fdb_transaction().
 -type fdb_key() :: binary().
+-type fdb_key_offset() :: integer().
+-type fdb_key_op() :: first_gt | first_gte | last_lt | last_lte.
+-type fdb_key_selector() :: {fdb_key_op(), fdb_key(), fdb_key_offset}.
+-type fdb_range_selector() :: fdb_key_selector.
 
 %% @doc Loads the native FoundationDB library file from a certain location
 -spec init(SoFile::list())-> ok | {error, term()}.
@@ -74,6 +78,24 @@ get({tx, Tx}, Key, DefaultValue) ->
     not_found -> DefaultValue;
     _ -> Result
   end.
+
+first_gte(Key) -> first_gte(Key, 0).
+first_gte(Key, Offset) -> {first, true, Key, Offset}.
+
+first_gt(Key) -> first_gt(Key, 0).
+first_gt(Key, Offset) -> {first, false, Key, Offset}.
+
+last_lt(Key) -> last_lt(Key, 0).
+last_lt(Key, Offset) -> {last, false, Key, Offset}.
+
+last_lte(Key) -> last_lte(Key, 0).
+last_lte(Key, Offset) -> {last, true, Key, Offset}.
+
+get_range({tx, Transaction}, {first, FstIsEq, FstKey, FstOffset},{last, LstIsEq, LstKey, LstOffset}, Limit, TargetBytes, StreamingMode, Iteration, IsSnapshot, IsReverse) ->
+ fdb_nif:fdb_transaction_get_range(Transaction, 
+    FstKey, FstIsEq, FstOffset,
+    LstKey, LstIsEq, LstOffset,
+    Limit, TargetBytes, StreamingMode, Iteration, IsSnapshot, IsReverse).
 
 %% @doc sets a key and value
 %% Existing values will be overwritten
@@ -134,7 +156,7 @@ wait_non_blocking(F, false) ->
     Ref -> ok
     after ?FUTURE_TIMEOUT -> timeout
   end;
-wait_non_blocking(F, true) ->
+wait_non_blocking(_F, true) ->
   ok.
  
 

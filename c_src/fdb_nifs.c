@@ -866,7 +866,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_get_addresses_for_key", 3, nif_fdb_transaction_get_addresses_for_key},
     {"fdb_transaction_get_committed_version", 2, nif_fdb_transaction_get_committed_version},
     {"fdb_transaction_get_key", 6, nif_fdb_transaction_get_key},
-    {"fdb_transaction_get_range", 15, nif_fdb_transaction_get_range},
+    {"fdb_transaction_get_range", 13, nif_fdb_transaction_get_range},
     {"fdb_transaction_get_range_selector", 10, nif_fdb_transaction_get_range_selector},
     {"fdb_transaction_get_read_version", 1, nif_fdb_transaction_get_read_version},
     {"fdb_transaction_on_error", 2, nif_fdb_transaction_on_error},
