@@ -12,6 +12,14 @@ static ERL_NIF_TERM atom_undefined;
 static ERL_NIF_TERM atom_true;
 static ERL_NIF_TERM atom_false;
 static ERL_NIF_TERM error_not_implemented;
+static ERL_NIF_TERM atom_iterator;
+static ERL_NIF_TERM atom_want_all;
+static ERL_NIF_TERM atom_small;
+static ERL_NIF_TERM atom_medium;
+static ERL_NIF_TERM atom_large;
+static ERL_NIF_TERM atom_serial;
+static ERL_NIF_TERM atom_exact;
+
 
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
@@ -31,6 +39,44 @@ static ERL_NIF_TERM mk_result(ErlNifEnv* env, fdb_error_t errcode, ERL_NIF_TERM 
     return enif_make_tuple2(env,enif_make_int(env,errcode),result);
 }
 
+static fdb_bool_t get_boolean(ErlNifEnv* env, ERL_NIF_TERM atom)
+{
+    return enif_compare( atom, atom_true) == 0;
+}
+
+static int get_FDBStreamingMode(ErlNifEnv* env, ERL_NIF_TERM atom, FDBStreamingMode* mode) 
+{
+    if (enif_compare( atom, atom_iterator) == 0) {
+      (*mode) = FDB_STREAMING_MODE_ITERATOR; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_want_all) == 0) {
+      (*mode) = FDB_STREAMING_MODE_WANT_ALL;
+      return 1;
+    }
+    if (enif_compare( atom, atom_small) == 0) {
+      (*mode) = FDB_STREAMING_MODE_SMALL;
+      return 1;
+    }
+    if (enif_compare( atom, atom_medium) == 0) {
+      (*mode) = FDB_STREAMING_MODE_MEDIUM;
+      return 1;
+    }
+    if (enif_compare( atom, atom_large) == 0) {
+      (*mode) = FDB_STREAMING_MODE_LARGE;
+      return 1;
+    }
+    if (enif_compare( atom, atom_serial) == 0) {
+      (*mode) =FDB_STREAMING_MODE_SERIAL;
+      return 1;
+    }
+    if (enif_compare( atom, atom_exact) == 0) {
+      (*mode) =FDB_STREAMING_MODE_EXACT;
+      return 1;
+    }
+    return 0;
+}
+
 /*
  * This function is called when loading the nif.
  *
@@ -45,6 +91,13 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_not_found = enif_make_atom(env,"not_found");
     atom_undefined = enif_make_atom(env,"undefined");
     error_not_implemented = mk_error(env,"not_implemented");
+    atom_iterator = enif_make_atom(env, "iterator");
+    atom_want_all = enif_make_atom(env, "want_all");
+    atom_small = enif_make_atom(env, "small");
+    atom_medium = enif_make_atom(env, "medium");
+    atom_large = enif_make_atom(env, "large");
+    atom_serial = enif_make_atom(env, "serial");
+    atom_exact = enif_make_atom(env, "exact");
 
     if (register_fdb_resources(env)!=0)
         return -1;
@@ -381,6 +434,12 @@ static ERL_NIF_TERM nif_fdb_network_set_option(ErlNifEnv* env, int argc, const E
     return error_not_implemented;
 }
 
+static void* thr_event_loop(void* obj)
+{
+    fdb_run_network();
+    return NULL;
+}
+
 static ERL_NIF_TERM nif_fdb_run_network(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     if (argc!=0) return enif_make_badarg(env);
@@ -392,11 +451,6 @@ static ERL_NIF_TERM nif_fdb_run_network(ErlNifEnv* env, int argc, const ERL_NIF_
     enif_make_resource(env,network);
     network->is_running = 1;
     return atom_ok;
-}
-
-static void thr_event_loop(void* obj)
-{
-    fdb_run_network();
 }
 
 static ERL_NIF_TERM nif_fdb_select_api_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -522,7 +576,7 @@ static ERL_NIF_TERM nif_fdb_transaction_get(ErlNifEnv* env, int argc, const ERL_
     if (argc!=2) return enif_make_badarg(env);
     if (get_transaction(env,argv[0],&Tx) == 0) return enif_make_badarg(env);
     if (enif_inspect_binary(env,argv[1],&Key) == 0
-            && enif_inspect_iolist_as_binary(env,argv[2], &Key) == 0) return enif_make_badarg(env);
+            && enif_inspect_iolist_as_binary(env,argv[1], &Key) == 0) return enif_make_badarg(env);
 
     Future->handle = fdb_transaction_get(Tx->handle,Key.data,Key.size,0);
 
@@ -567,25 +621,58 @@ static ERL_NIF_TERM nif_fdb_transaction_get_key(ErlNifEnv* env, int argc, const 
 
 static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=15) return mk_error(env,"expected_15_parameters");
+    enif_transaction_t *Tx;
+    ErlNifBinary begin_key;
+    fdb_bool_t begin_or_equal;
+    int begin_offset;
+    ErlNifBinary end_key;
+    fdb_bool_t end_or_equal;
+    int end_offset;
+    int limit;
+    int target_bytes;
+    FDBStreamingMode mode;
+    int iteration;
+    fdb_bool_t snapshot;
+    fdb_bool_t reverse;
+    enif_future_t *Future = wrap_future(NULL);
 
-    //  FDBTransaction* tr;
-    //  uint8_t const* begin_key_name;
-    //  int begin_key_name_length;
-    //  fdb_bool_t begin_or_equal;
-    //  int begin_offset;
-    //  uint8_t const* end_key_name;
-    //  int end_key_name_length;
-    //  fdb_bool_t end_or_equal;
-    //  int end_offset;
-    //  int limit;
-    //  int target_bytes;
-    //  FDBStreamingMode mode;
-    //  int iteration;
-    //  fdb_bool_t snapshot;
-    //  fdb_bool_t reverse;
+    if (argc!=13) return enif_make_badarg(env);
 
-    return error_not_implemented;
+    if (get_transaction(env,argv[0],&Tx) == 0) 
+       return enif_make_badarg(env);
+
+    if (enif_inspect_binary(env,argv[1],&begin_key) == 0
+            && enif_inspect_iolist_as_binary(env,argv[1], &begin_key) == 0)
+       return enif_make_badarg(env);
+    begin_or_equal = get_boolean(env, argv[2]);
+    if (enif_get_int(env, argv[3], &begin_offset) == 0) 
+       return enif_make_badarg(env);
+
+    if (enif_inspect_binary(env,argv[4],&end_key) == 0
+            && enif_inspect_iolist_as_binary(env,argv[4], &end_key) == 0)
+       return enif_make_badarg(env);
+    if (enif_get_int(env, argv[5], &end_offset) == 0) 
+       return enif_make_badarg(env);
+    end_or_equal = get_boolean(env, argv[6]);
+    
+    if (enif_get_int(env, argv[7], &limit) == 0) 
+       return enif_make_badarg(env);
+    if (enif_get_int(env, argv[8], &target_bytes) == 0) 
+       return enif_make_badarg(env);
+    if (get_FDBStreamingMode(env, argv[9], &mode) == 0)
+       return enif_make_badarg(env);
+    if (enif_get_int(env, argv[10], &iteration) == 0) 
+       return enif_make_badarg(env);
+    snapshot = get_boolean(env, argv[11]);
+    reverse = get_boolean(env, argv[12]);
+
+    Future->handle = fdb_transaction_get_range(Tx->handle,
+       begin_key.data, begin_key.size, begin_or_equal, begin_offset,
+       end_key.data, end_key.size, end_or_equal, end_offset,
+       limit, target_bytes, mode, iteration, snapshot, reverse
+       );
+
+    return mk_and_release_resource(env,Future);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_get_range_selector(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
