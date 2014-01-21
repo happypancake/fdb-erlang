@@ -13,7 +13,7 @@ hello_world_test() ->
   ok = fdb:set(DB, AKey, AValue),
   AValue = fdb:get(DB, AKey),
   ok = fdb:clear(DB, AKey),
-  not_found = fdb:get(DB, AKey).
+  ?assertEqual(not_found, fdb:get(DB, AKey)).
 
 transaction_test() ->
   fdb:init(?SOLIB),

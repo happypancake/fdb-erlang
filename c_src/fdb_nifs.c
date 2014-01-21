@@ -192,6 +192,8 @@ static ERL_NIF_TERM nif_fdb_database_create_transaction(ErlNifEnv* env, int argc
        ) return enif_make_badarg(env);
 
     fdb_error_t err = fdb_database_create_transaction(DB->handle, &Tx->handle);
+    Tx->parent = (void*)DB;
+    enif_keep_resource(Tx->parent);
 
     return mk_result(env, err,mk_and_release_resource(env,Tx));
 }
@@ -580,6 +582,9 @@ static ERL_NIF_TERM nif_fdb_transaction_get(ErlNifEnv* env, int argc, const ERL_
 
     Future->handle = fdb_transaction_get(Tx->handle,Key.data,Key.size,0);
 
+    Future->parent = (void*)Tx;
+    enif_keep_resource(Tx->parent);
+
     return mk_and_release_resource(env,Future);
 
 }
@@ -671,6 +676,9 @@ static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, cons
        end_key.data, end_key.size, end_or_equal, end_offset,
        limit, target_bytes, mode, iteration, snapshot, reverse
        );
+    Future->parent = (void*)Tx;
+    enif_keep_resource(Future->parent);
+
 
     return mk_and_release_resource(env,Future);
 }
