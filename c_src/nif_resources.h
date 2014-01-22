@@ -17,19 +17,16 @@ typedef struct {
 typedef struct {
     ErlNifMutex *lock;
     FDBCluster* handle;
-    void *parent;
 } enif_cluster_t;
 
 typedef struct {
     ErlNifMutex *lock;
     FDBDatabase* handle;
-    void *parent;
 } enif_database_t;
 
 typedef struct {
     ErlNifMutex *lock;
     FDBTransaction* handle;
-    void *parent;
 } enif_transaction_t;
 
 typedef struct {
@@ -38,7 +35,6 @@ typedef struct {
     ErlNifEnv* callback_env;
     ErlNifPid  callback_pid;
     ERL_NIF_TERM callback_msg;
-    void* parent;
 } enif_future_t;
 
 enif_network_t* wrap_network();

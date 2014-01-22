@@ -23,7 +23,6 @@ enif_cluster_t* wrap_cluster(FDBCluster *c)
          enif_alloc_resource(CLUSTER_RESOURCE,sizeof(enif_cluster_t));
     ctx->handle = c;
     ctx->lock = enif_mutex_create("cluster");
-    ctx->parent = NULL;
     return ctx;
 }
 
@@ -34,7 +33,6 @@ enif_database_t* wrap_database(FDBDatabase* d)
          enif_alloc_resource(DATABASE_RESOURCE,sizeof(enif_database_t));
     ctx->handle = d;
     ctx->lock = enif_mutex_create("database");
-    ctx->parent = NULL;
     return ctx;
 }
 
@@ -45,7 +43,6 @@ enif_transaction_t* wrap_transaction(FDBTransaction *t)
          enif_alloc_resource(TRANSACTION_RESOURCE,sizeof(enif_transaction_t));
     ctx->handle = t;
     ctx->lock = enif_mutex_create("transaction");
-    ctx->parent = NULL;
     return ctx;
 }
 
@@ -57,7 +54,6 @@ enif_future_t* wrap_future(FDBFuture *f)
     ctx->handle = f;
     ctx->callback_env = NULL;
     ctx->lock = enif_mutex_create("future");
-    ctx->parent = NULL;
     return ctx;
 }
 
@@ -74,6 +70,7 @@ void cleanup_network(ErlNifEnv* env, void* obj)
         ctx->is_running = 0;
     }
     enif_mutex_unlock(lock);
+    enif_mutex_destroy(lock);
 }
 
 void cleanup_cluster(ErlNifEnv* env, void* obj)
@@ -88,6 +85,7 @@ void cleanup_cluster(ErlNifEnv* env, void* obj)
         ctx->handle = NULL;
     }
     enif_mutex_unlock(lock);
+    enif_mutex_destroy(lock);
 }
 
 void cleanup_database(ErlNifEnv* env, void* obj)
@@ -101,11 +99,8 @@ void cleanup_database(ErlNifEnv* env, void* obj)
         fdb_database_destroy(ctx->handle);
         ctx->handle = NULL;
     }
-    if (ctx->parent != NULL) {
-        enif_release_resource(ctx->parent);
-        ctx->parent = NULL;
-    }
     enif_mutex_unlock(lock);
+    enif_mutex_destroy(lock);
 }
 
 void cleanup_transaction(ErlNifEnv* env, void* obj)
@@ -119,11 +114,8 @@ void cleanup_transaction(ErlNifEnv* env, void* obj)
         fdb_transaction_destroy(ctx->handle);
         ctx->handle = NULL;
     }
-    if (ctx->parent != NULL) {
-        enif_release_resource(ctx->parent);
-        ctx->parent = NULL;
-    }
     enif_mutex_unlock(lock);
+    enif_mutex_destroy(lock);
 }
 
 void cleanup_future(ErlNifEnv* env, void* obj)
@@ -140,12 +132,10 @@ void cleanup_future(ErlNifEnv* env, void* obj)
     if (ctx->callback_env != NULL)
     {
         enif_free_env(ctx->callback_env);
-    }
-    if (ctx->parent != NULL) {
-        enif_release_resource(ctx->parent);
-        ctx->parent = NULL;
+        ctx->handle = NULL;
     }
     enif_mutex_unlock(lock);
+    enif_mutex_destroy(lock);
 }
 
 int get_cluster(ErlNifEnv* env, ERL_NIF_TERM term,enif_cluster_t **cluster)

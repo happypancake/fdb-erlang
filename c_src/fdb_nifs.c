@@ -192,8 +192,6 @@ static ERL_NIF_TERM nif_fdb_database_create_transaction(ErlNifEnv* env, int argc
        ) return enif_make_badarg(env);
 
     fdb_error_t err = fdb_database_create_transaction(DB->handle, &Tx->handle);
-    Tx->parent = (void*)DB;
-    enif_keep_resource(Tx->parent);
 
     return mk_result(env, err,mk_and_release_resource(env,Tx));
 }
@@ -582,9 +580,6 @@ static ERL_NIF_TERM nif_fdb_transaction_get(ErlNifEnv* env, int argc, const ERL_
 
     Future->handle = fdb_transaction_get(Tx->handle,Key.data,Key.size,0);
 
-    Future->parent = (void*)Tx;
-    enif_keep_resource(Tx->parent);
-
     return mk_and_release_resource(env,Future);
 
 }
@@ -676,9 +671,6 @@ static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, cons
        end_key.data, end_key.size, end_or_equal, end_offset,
        limit, target_bytes, mode, iteration, snapshot, reverse
        );
-    Future->parent = (void*)Tx;
-    enif_keep_resource(Future->parent);
-
 
     return mk_and_release_resource(env,Future);
 }
@@ -817,6 +809,7 @@ static ERL_NIF_TERM send_on_complete(ErlNifEnv* env, int argc, const ERL_NIF_TER
 
     f->callback_env = enif_alloc_env();
     f->callback_msg = enif_make_copy(f->callback_env, argv[2]);
+    enif_keep_resource(f);
     errcode = fdb_future_set_callback(f->handle, send_message_callback, f);
     return enif_make_int(env,errcode);
 }
@@ -824,9 +817,13 @@ static ERL_NIF_TERM send_on_complete(ErlNifEnv* env, int argc, const ERL_NIF_TER
 void send_message_callback(FDBFuture* f,void* enifF)
 {
     enif_future_t* ctx = (enif_future_t*)enifF;
+    if (ctx->lock == NULL) return;
+    enif_mutex_lock(ctx->lock);
     enif_send(NULL, &(ctx->callback_pid),ctx->callback_env,ctx->callback_msg);  
-    enif_free_env(ctx->callback_env);
+
     ctx->callback_env = NULL;
+    enif_mutex_unlock(ctx->lock);
+    enif_release_resource(ctx);
 }
 
 static ErlNifFunc nifs[] =
