@@ -4,10 +4,12 @@
 -export([get/2,get/3,set/3]).
 -export([clear/2]).
 -export([transact/2]).
+-export([bind/2,next/1]).
 
 -define (FDB_API_VERSION, 21).
 
 -define (FUTURE_TIMEOUT, 5000).
+-include("../include/fdb.hrl").
 
 -type fdb_version() :: pos_integer().
 -type fdb_errorcode() :: pos_integer().
@@ -17,10 +19,6 @@
 -type fdb_transaction() :: {tx, term()}.
 -type fdb_handle() :: fdb_database() | fdb_transaction().
 -type fdb_key() :: binary().
--type fdb_key_offset() :: integer().
--type fdb_key_op() :: first_gt | first_gte | last_lt | last_lte.
--type fdb_key_selector() :: {fdb_key_op(), fdb_key(), fdb_key_offset}.
--type fdb_range_selector() :: fdb_key_selector.
 
 %% @doc Loads the native FoundationDB library file from a certain location
 -spec init(SoFile::list())-> ok | {error, term()}.
@@ -59,12 +57,19 @@ open() ->
   {ok, DbHandle} = DBR, 
   {ok,{db, DbHandle}}.
 
-%% @doc Gets a value using a key
+%% @doc Gets a value using a key or multiple values using a selector
 %%
-%% Returns `not_found` if the key is not found. 
--spec get(fdb_handle(), fdb_key()) -> (term() | not_found).
+%% Returns `not_found` for the single value if the key is not found, 
+-spec get(fdb_handle(), fdb_key()|#select{}) -> (term() | not_found).
 %% @end
-get(FdbHandle, Key) -> get(FdbHandle, Key, not_found).
+get({db, DB}, Select = #select{}) ->
+  transact(DB, fun(Tx) -> get(Tx, Select) end);
+get({tx, Tx}, Select = #select{}) ->
+  Iterator = bind(Tx, Select),
+  Next = next(Iterator),
+  Next#iterator.data;
+get(FdbHandle, Key) -> 
+  get(FdbHandle, Key, not_found).
 
 %% @doc Gets a value using a key, falls back to a default value if not found
 -spec get(fdb_handle(), fdb_key(), term()) -> term().
@@ -79,23 +84,30 @@ get({tx, Tx}, Key, DefaultValue) ->
     _ -> Result
   end.
 
-first_gte(Key) -> first_gte(Key, 0).
-first_gte(Key, Offset) -> {first, true, Key, Offset}.
+bind({db, DB}, Select = #select{}) ->
+  transact(DB, fun(Tx) -> get(Tx, Select) end);
+bind({tx, Transaction}, Select = #select{}) ->
+  #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
-first_gt(Key) -> first_gt(Key, 0).
-first_gt(Key, Offset) -> {first, false, Key, Offset}.
+next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteration, select = Select}) 
+  when Iteration == 0 orelse OldData =/= [] ->
+  {FstKey, FstIsEq} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
+  {LstKey, LstIsEq} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
+  F = fdb_nif:fdb_transaction_get_range(Transaction, 
+    FstKey, FstIsEq, Select#select.offset_begin,
+    LstKey, LstIsEq, Select#select.offset_end,
+    Select#select.limit, 
+    Select#select.target_bytes, 
+    Select#select.streaming_mode, 
+    Iteration, 
+    Select#select.is_snapshot, 
+    Select#select.is_reverse),
+  {ok, Data} = fdb_nif:future_get(F, keyvalue_array),
+  Iterator#iterator{ data = Data, iteration = Iteration + 1}.
 
-last_lt(Key) -> last_lt(Key, 0).
-last_lt(Key, Offset) -> {last, false, Key, Offset}.
-
-last_lte(Key) -> last_lte(Key, 0).
-last_lte(Key, Offset) -> {last, true, Key, Offset}.
-
-get_range({tx, Transaction}, {first, FstIsEq, FstKey, FstOffset},{last, LstIsEq, LstKey, LstOffset}, Limit, TargetBytes, StreamingMode, Iteration, IsSnapshot, IsReverse) ->
- fdb_nif:fdb_transaction_get_range(Transaction, 
-    FstKey, FstIsEq, FstOffset,
-    LstKey, LstIsEq, LstOffset,
-    Limit, TargetBytes, StreamingMode, Iteration, IsSnapshot, IsReverse).
+extract_keys(nil, nil, Default) -> {Default, true};
+extract_keys(nil, Value, _) -> { tuple:pack(Value), true };
+extract_keys(Value, nil, _) -> { tuple:pack(Value), false }.
 
 %% @doc sets a key and value
 %% Existing values will be overwritten
@@ -158,7 +170,6 @@ wait_non_blocking(F, false) ->
   end;
 wait_non_blocking(_F, true) ->
   ok.
- 
 
 check_future_error(0, F, FQuery) ->
   ErrCode = fdb_nif:fdb_future_get_error(F),
