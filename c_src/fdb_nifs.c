@@ -77,6 +77,15 @@ static int get_FDBStreamingMode(ErlNifEnv* env, ERL_NIF_TERM atom, FDBStreamingM
     return 0;
 }
 
+static ERL_NIF_TERM make_binary(ErlNifEnv *env, const uint8_t *data, int size)
+{
+
+        ERL_NIF_TERM result;
+        uint8_t *chars = enif_make_new_binary(env,size,&result);
+        memcpy(chars,data,size);
+        return result;
+}
+
 /*
  * This function is called when loading the nif.
  *
@@ -296,14 +305,36 @@ static ERL_NIF_TERM nif_fdb_future_get_key(ErlNifEnv* env, int argc, const ERL_N
 
 static ERL_NIF_TERM nif_fdb_future_get_keyvalue_array(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=4) return enif_make_badarg(env);
+    enif_future_t *f;
+    const FDBKeyValue ** out_kv=NULL;
+    int* out_count = NULL;
+    fdb_bool_t* out_more = NULL;
 
-    //  FDBFuture* f;
-    //  FDBKeyValue const** out_kv;
-    //  int* out_count;
-    //  fdb_bool_t* out_more;
+    if (argc!=1) return enif_make_badarg(env);
+    if (get_future(env, argv[0], &f) == 0 )
+        return enif_make_badarg(env);
+    
+    fdb_error_t err = fdb_future_get_keyvalue_array(f->handle, out_kv, out_count, out_more);
 
-    return error_not_implemented;
+    if (err != 0)
+    {
+        return mk_result(env,err,atom_undefined);
+    }
+    else
+    {
+        ERL_NIF_TERM result = enif_make_list(env, 0);
+
+        while (out_count>0)
+        {
+	   out_count = out_count - 1;
+           const FDBKeyValue *kv = out_kv[*out_count];
+           ERL_NIF_TERM k = make_binary(env, kv->key, kv->key_length);
+           ERL_NIF_TERM v = make_binary(env, kv->value, kv->value_length);
+           ERL_NIF_TERM elem = enif_make_tuple2(env, k, v);
+           result = enif_make_list_cell(env, elem, result);
+        }
+        return mk_result(env,err,result);
+    }
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_string_array(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -845,7 +876,7 @@ static ErlNifFunc nifs[] =
     {"fdb_future_get_database", 1, nif_fdb_future_get_database},
     {"fdb_future_get_error", 1, nif_fdb_future_get_error},
     {"fdb_future_get_key", 3, nif_fdb_future_get_key},
-    {"fdb_future_get_keyvalue_array", 4, nif_fdb_future_get_keyvalue_array},
+    {"fdb_future_get_keyvalue_array", 1, nif_fdb_future_get_keyvalue_array},
     {"fdb_future_get_string_array", 3, nif_fdb_future_get_string_array},
     {"fdb_future_get_value", 1, nif_fdb_future_get_value},
     {"fdb_future_get_version", 2, nif_fdb_future_get_version},

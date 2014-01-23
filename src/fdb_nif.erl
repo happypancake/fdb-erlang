@@ -87,13 +87,13 @@ fdb_future_get_error(_f) ->
 fdb_future_get_key(_f, _out_key, _out_key_length) ->
   nif_not_loaded.
 
-fdb_future_get_keyvalue_array(_f, _out_kv, _out_count, _out_more) ->
+fdb_future_get_keyvalue_array(_f) ->
   nif_not_loaded.
 
 fdb_future_get_string_array(_f, _out_strings, _out_count) ->
   nif_not_loaded.
 
-fdb_future_get_value(_f ) ->
+fdb_future_get_value(_f) ->
   nif_not_loaded.
 
 fdb_future_get_version(_f, _out_version) ->

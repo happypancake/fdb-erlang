@@ -62,12 +62,12 @@ open() ->
 %% Returns `not_found` for the single value if the key is not found, 
 -spec get(fdb_handle(), fdb_key()|#select{}) -> (term() | not_found).
 %% @end
-get({db, DB}, Select = #select{}) ->
+get(DB={db, _}, Select = #select{}) ->
   transact(DB, fun(Tx) -> get(Tx, Select) end);
-get({tx, Tx}, Select = #select{}) ->
+get(Tx={tx, _}, Select = #select{}) ->
   Iterator = bind(Tx, Select),
   Next = next(Iterator),
-  Next#iterator.data;
+  lists:map(fun(x)-> binary_to_term(x) end, Next#iterator.data);
 get(FdbHandle, Key) -> 
   get(FdbHandle, Key, not_found).
 
@@ -81,7 +81,7 @@ get({tx, Tx}, Key, DefaultValue) ->
   {ok, Result} = future_get(GetF, value),
   case Result of
     not_found -> DefaultValue;
-    _ -> Result
+    _ -> binary_to_term(Result)
   end.
 
 bind({db, DB}, Select = #select{}) ->
@@ -116,7 +116,7 @@ extract_keys(Value, nil, _) -> { tuple:pack(Value), false }.
 set({db, Database}, Key, Value) ->
   transact({db, Database}, fun (Tx)-> set(Tx, Key, Value) end);
 set({tx, Tx}, Key, Value) ->
-  ErrCode = fdb_nif:fdb_transaction_set(Tx, tuple:pack(Key), Value),
+  ErrCode = fdb_nif:fdb_transaction_set(Tx, tuple:pack(Key), term_to_binary(Value)),
   handle_fdb_result(ErrCode).
 
 %% @doc Clears a key and it's value
