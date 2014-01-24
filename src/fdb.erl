@@ -66,8 +66,7 @@ get(DB={db, _}, Select = #select{}) ->
   transact(DB, fun(Tx) -> get(Tx, Select) end);
 get(Tx={tx, _}, Select = #select{}) ->
   Iterator = bind(Tx, Select),
-  Next = next(Iterator),
-  lists:map(fun(x)-> binary_to_term(x) end, Next#iterator.data);
+  iterate_all(Iterator);
 get(FdbHandle, Key) -> 
   get(FdbHandle, Key, not_found).
 
@@ -89,8 +88,9 @@ bind({db, DB}, Select = #select{}) ->
 bind({tx, Transaction}, Select = #select{}) ->
   #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
-next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteration, select = Select}) 
-  when Iteration == 1 orelse OldData =/= [] ->
+next(Iterator = #iterator{out_more=0}) -> 
+  Iterator#iterator{data = []};
+next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
   {LstKey, LstIsEq} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
   F = fdb_nif:fdb_transaction_get_range(Transaction, 
@@ -102,8 +102,17 @@ next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteratio
     Iteration, 
     Select#select.is_snapshot, 
     Select#select.is_reverse),
-  {ok, Data} = future_get(F, keyvalue_array),
-  Iterator#iterator{ data = Data, iteration = Iteration + 1}.
+  {ok, {EncodedData, OutMore}} = future_get(F, keyvalue_array),
+  Data = lists:map(fun({X, Y})-> {tuple:unpack(X), binary_to_term(Y)} end, EncodedData),
+  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = OutMore}.
+
+iterate_all(Iterator) ->
+  iterate_all(Iterator, []).
+iterate_all(#iterator{out_more = 0}, Result) ->
+  Result;
+iterate_all(Iterator, Result) ->
+  Next = next(Iterator),
+  iterate_all(Next, Result++Next#iterator.data). 
 
 extract_keys(nil, nil, Default) -> {Default, true};
 extract_keys(nil, Value, _) -> { tuple:pack(Value), true };

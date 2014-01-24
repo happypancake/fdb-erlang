@@ -306,15 +306,15 @@ static ERL_NIF_TERM nif_fdb_future_get_key(ErlNifEnv* env, int argc, const ERL_N
 static ERL_NIF_TERM nif_fdb_future_get_keyvalue_array(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     enif_future_t *f;
-    const FDBKeyValue ** out_kv=NULL;
-    int* out_count = NULL;
-    fdb_bool_t* out_more = NULL;
+    const FDBKeyValue * out_kv=NULL;
+    int out_count = 0;
+    fdb_bool_t out_more = 0;
 
     if (argc!=1) return enif_make_badarg(env);
     if (get_future(env, argv[0], &f) == 0 )
         return enif_make_badarg(env);
     
-    fdb_error_t err = fdb_future_get_keyvalue_array(f->handle, out_kv, out_count, out_more);
+    fdb_error_t err = fdb_future_get_keyvalue_array(f->handle, &out_kv, &out_count, &out_more);
 
     if (err != 0)
     {
@@ -327,13 +327,13 @@ static ERL_NIF_TERM nif_fdb_future_get_keyvalue_array(ErlNifEnv* env, int argc, 
         while (out_count>0)
         {
 	   out_count = out_count - 1;
-           const FDBKeyValue *kv = out_kv[*out_count];
+           const FDBKeyValue *kv = &(out_kv[out_count]);
            ERL_NIF_TERM k = make_binary(env, kv->key, kv->key_length);
            ERL_NIF_TERM v = make_binary(env, kv->value, kv->value_length);
            ERL_NIF_TERM elem = enif_make_tuple2(env, k, v);
            result = enif_make_list_cell(env, elem, result);
         }
-        return mk_result(env,err,result);
+        return mk_result(env,err,enif_make_tuple2(env,result,enif_make_int(env,out_more)));
     }
 }
 
