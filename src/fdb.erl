@@ -90,7 +90,7 @@ bind({tx, Transaction}, Select = #select{}) ->
   #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
 next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteration, select = Select}) 
-  when Iteration == 0 orelse OldData =/= [] ->
+  when Iteration == 1 orelse OldData =/= [] ->
   {FstKey, FstIsEq} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
   {LstKey, LstIsEq} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
   F = fdb_nif:fdb_transaction_get_range(Transaction, 
@@ -102,7 +102,7 @@ next(Iterator = #iterator{tx = Transaction, data = OldData, iteration = Iteratio
     Iteration, 
     Select#select.is_snapshot, 
     Select#select.is_reverse),
-  {ok, Data} = fdb_nif:future_get(F, keyvalue_array),
+  {ok, Data} = future_get(F, keyvalue_array),
   Iterator#iterator{ data = Data, iteration = Iteration + 1}.
 
 extract_keys(nil, nil, Default) -> {Default, true};

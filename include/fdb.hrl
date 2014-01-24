@@ -8,7 +8,7 @@
    limit = 0,
    target_bytes = 0,
    streaming_mode = iterator,
-   iteration = 0,
+   iteration = 1,
    is_snapshot = false,
    is_reverse = false}).
 

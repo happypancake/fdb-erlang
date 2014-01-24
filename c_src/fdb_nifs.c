@@ -682,10 +682,10 @@ static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, cons
     if (enif_inspect_binary(env,argv[4],&end_key) == 0
             && enif_inspect_iolist_as_binary(env,argv[4], &end_key) == 0)
        return enif_make_badarg(env);
-    if (enif_get_int(env, argv[5], &end_offset) == 0) 
+    end_or_equal = get_boolean(env, argv[5]);
+    if (enif_get_int(env, argv[6], &end_offset) == 0) 
        return enif_make_badarg(env);
-    end_or_equal = get_boolean(env, argv[6]);
-    
+
     if (enif_get_int(env, argv[7], &limit) == 0) 
        return enif_make_badarg(env);
     if (enif_get_int(env, argv[8], &target_bytes) == 0) 
