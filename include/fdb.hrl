@@ -14,7 +14,7 @@
 
 -record(iterator, {
    tx,
-   iteration = 0,
+   iteration,
    data = [],
    select,
    out_more = 1}).

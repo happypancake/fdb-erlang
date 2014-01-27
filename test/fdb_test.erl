@@ -35,7 +35,7 @@ range_test() ->
   fdb:api_version(100),
   {ok, DB} = fdb:open(),
   [ok = fdb:set(DB, I, I) || I <- lists:seq(1, 4)],
-  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{gte = 2, lte =4})),
+  ?assertEqual([{2, 2}, {3, 3},{4, 4}], fdb:get(DB, #select{gte = 2, lte =4})),
   ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{gte = 2, lte =3})),
   ?assertEqual([{2, 2}, {3, 3}, {4, 4}], fdb:get(DB, #select{gte = 2})),
   ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2})),
