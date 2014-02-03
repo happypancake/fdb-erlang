@@ -33,4 +33,8 @@ range_test() ->
   ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gte = 2, lte =3})),
   ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gt = 1, lt = 4})),
   ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2, lt = 5})),
-  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ gt = 0, lt = 3})).
+  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ gt = 0, lt = 3})),
+  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ lt = 3})),
+  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2})),
+  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gte = 3})).
+

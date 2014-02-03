@@ -110,10 +110,10 @@ bind({tx, Transaction}, Select = #select{}) ->
 next(Iterator = #iterator{out_more=0}) -> 
   Iterator#iterator{data = []};
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
-  {FstKey, FstIsEq, FstOfs} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
-  {LstKey, LstIsEq, LstOfs} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
+  {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
+  {LstKey, LstIsEq, LstOfs} = lst_lt(Select#select.lt, Select#select.lte),
   F = fdb_nif:fdb_transaction_get_range(Transaction, 
-    FstKey, FstIsEq, Select#select.offset_begin + 1 - FstOfs,
+    FstKey, FstIsEq, Select#select.offset_begin + FstOfs,
     <<LstKey/binary>>, LstIsEq, Select#select.offset_end + LstOfs,
     Select#select.limit, 
     Select#select.target_bytes, 
@@ -133,9 +133,13 @@ iterate_all(Iterator, Result) ->
   Next = next(Iterator),
   iterate_all(Next, Result++Next#iterator.data). 
 
-extract_keys(nil, nil, Default) -> {Default, false, 1};
-extract_keys(nil, Value, _) -> { tuple:pack(Value), true, 1 };
-extract_keys(Value, nil, _) -> { tuple:pack(Value), false, 0 }.
+fst_gt(nil, nil) -> {<<0>>, true, 0};
+fst_gt(nil, Value) -> { tuple:pack(Value), true, 0 };
+fst_gt(Value, nil) -> { tuple:pack(Value), true, 1 }.
+
+lst_lt(nil, nil) -> {<<255>>, false, 1};
+lst_lt(nil, Value) -> { tuple:pack(Value), true, 1 };
+lst_lt(Value, nil) -> { tuple:pack(Value), false, 1 }.
 
 %% @doc sets a key and value
 %% Existing values will be overwritten
