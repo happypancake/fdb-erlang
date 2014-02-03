@@ -333,7 +333,7 @@ static ERL_NIF_TERM nif_fdb_future_get_keyvalue_array(ErlNifEnv* env, int argc, 
            ERL_NIF_TERM elem = enif_make_tuple2(env, k, v);
            result = enif_make_list_cell(env, elem, result);
         }
-        return mk_result(env,err,enif_make_tuple2(env,result,enif_make_int(env,out_more)));
+        return mk_result(env,err,result);
     }
 }
 

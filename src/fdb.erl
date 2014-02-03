@@ -119,7 +119,7 @@ bind({tx, Transaction}, Select = #select{}) ->
 %% @doc Get data of an iterator; returns the iterator or `done` when finished
 -spec next(#iterator{}) -> (#iterator{} | done).
 %% @end
-next(#iterator{out_more=0}) -> 
+next(#iterator{out_more=false}) -> 
   done;
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
@@ -133,21 +133,23 @@ next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Sele
     Iteration, 
     Select#select.is_snapshot, 
     Select#select.is_reverse),
-  {ok, {EncodedData, OutMore}} = future_get(F, keyvalue_array),
+  {ok, EncodedData} = future_get(F, keyvalue_array),
   Data = lists:map(fun({X, Y})-> {tuple:unpack(X), binary_to_term(Y)} end, EncodedData),
-  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = OutMore}.
+  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = Data /= []}.
 
 iterate_all(Iterator) ->
   iterate_all(next(Iterator), []).
-iterate_all(done, Result) ->
-  Result;
+iterate_all(done, Result) -> Result;
+iterate_all(#iterator{data = Data, select = Select}, []) 
+  when Select#select.limit == 0 andalso Select#select.target_bytes == 0
+  -> Data;
 iterate_all(Iterator, Result) ->
   NewResult = Result++Iterator#iterator.data,
   Next = next(Iterator),
   iterate_all(Next, NewResult). 
 
 fst_gt(nil, nil) -> {<<0>>, true, 0};
-fst_gt(nil, Value) -> { tuple:pack(Value), true, 0 };
+fst_gt(nil, Value) -> { tuple:pack(Value), true, 0  };
 fst_gt(Value, nil) -> { tuple:pack(Value), true, 1 }.
 
 lst_lt(nil, nil) -> {<<255>>, false, 1};

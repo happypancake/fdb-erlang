@@ -37,10 +37,10 @@ range_test() ->
     ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ gt = 0, lt = 3})),
     ?assertEqual([{2, 2}, {3, 3}], fdb:get_range(Tx, 2, 4)),
     ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ gt=0, lt = 3})),
-    ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ gt=0, lt = 3}))%,
-   % ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ lte=10}))%,
-   % ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gte = 8}))%,
-   % fdb:clear_range(Tx, 3, 9),
-   % ?assertEqual([{3, 3}, {8, 8}], fdb:get(Tx, #select{ gt = 2, lt = 9}))
+    ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ gt=0, lt = 3})),
+    ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gt=7})),
+    ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gte = 8})),
+    fdb:clear_range(Tx, 4, 8),
+    ?assertEqual([{3, 3}, {8, 8}], fdb:get(Tx, #select{ gt = 2, lt = 9}))
   end).
 

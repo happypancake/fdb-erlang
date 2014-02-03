@@ -17,4 +17,4 @@
    iteration,
    data = [],
    select,
-   out_more = 1}).
+   out_more = true}).
