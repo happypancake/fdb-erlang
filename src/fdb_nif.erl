@@ -134,7 +134,7 @@ fdb_transaction_atomic_op(_tr, _key_name, _key_name_length, _param, _param_lengt
 fdb_transaction_clear(_tr, _key) ->
   nif_not_loaded.
 
-fdb_transaction_clear_range(_tr, _begin_key_name, _begin_key_name_length, _end_key_name, _end_key_name_length) ->
+fdb_transaction_clear_range(_tr, _begin_key, _end_key) ->
   nif_not_loaded.
 
 fdb_transaction_commit(_tr) ->

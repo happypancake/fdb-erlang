@@ -1,11 +1,11 @@
 -module(fdb).
--export([init/0,init/1]).
--export([api_version/1,open/0]).
--export([get/2,get/3,set/3]).
--export([clear/2]).
+-export([init/0, init/1]).
+-export([api_version/1, open/0]).
+-export([get/2, get/3, get_range/3, set/3]).
+-export([clear/2, clear_range/3]).
 -export([transact/2]).
--export([bind/2,next/1]).
--export([init_and_open/0,init_and_open/1]).
+-export([bind/2, next/1]).
+-export([init_and_open/0, init_and_open/1]).
 
 -define (FDB_API_VERSION, 21).
 
@@ -79,7 +79,7 @@ init_and_open(SoFile) ->
 %% @doc Gets a value using a key or multiple values using a selector
 %%
 %% Returns `not_found` for the single value if the key is not found, 
--spec get(fdb_handle(), fdb_key()|#select{}) -> (term() | not_found).
+-spec get(fdb_handle(), fdb_key()|#select{}) -> (term() | not_found | [term()]).
 %% @end
 get(DB={db, _}, Select = #select{}) ->
   transact(DB, fun(Tx) -> get(Tx, Select) end);
@@ -88,6 +88,12 @@ get(Tx={tx, _}, Select = #select{}) ->
   iterate_all(Iterator);
 get(FdbHandle, Key) -> 
   get(FdbHandle, Key, not_found).
+
+%% @doc Gets a range of key_values where `begin <= X < end`
+-spec get_range(fdb_handle(), fdb_key(),fdb_key()) -> ([term()]).
+%% @end
+get_range(Handle, Begin, End) ->
+  get(Handle, #select{gte = Begin, lt = End}).
 
 %% @doc Gets a value using a key, falls back to a default value if not found
 -spec get(fdb_handle(), fdb_key(), term()) -> term().
@@ -158,6 +164,15 @@ clear({db, Database}, Key) ->
   transact({db, Database}, fun (Tx)-> clear(Tx, Key) end);
 clear({tx, Tx}, Key) ->
   ErrCode = fdb_nif:fdb_transaction_clear(Tx, tuple:pack(Key)),
+  handle_fdb_result(ErrCode).
+
+%% @doc Clears all keys where `begin <= X < end`
+-spec clear_range(fdb_handle(), fdb_key(), fdb_key()) -> fdb_cmd_result().
+%% @end
+clear_range({db, Database}, Begin, End) ->
+  transact({db, Database}, fun (Tx)-> clear_range(Tx, Begin, End) end);
+clear_range({tx, Tx}, Begin, End) ->
+  ErrCode = fdb_nif:fdb_transaction_clear_range(Tx, tuple:pack(Begin), tuple:pack(End)),
   handle_fdb_result(ErrCode).
 
 transact({db, DbHandle}, DoStuff) ->

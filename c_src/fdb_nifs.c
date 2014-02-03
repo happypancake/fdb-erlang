@@ -558,7 +558,7 @@ static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ER
     if (argc!=2) return enif_make_badarg(env);
     if (get_transaction(env,argv[0],&Tx) == 0) return enif_make_badarg(env);
     if (enif_inspect_binary(env,argv[1],&Key) == 0
-            && enif_inspect_iolist_as_binary(env,argv[2], &Key) == 0) return enif_make_badarg(env);
+            && enif_inspect_iolist_as_binary(env,argv[1], &Key) == 0) return enif_make_badarg(env);
 
     fdb_transaction_clear(Tx->handle,Key.data,Key.size);
 
@@ -568,15 +568,19 @@ static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ER
 
 static ERL_NIF_TERM nif_fdb_transaction_clear_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=5) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary Begin, End;
 
-    //  FDBTransaction* tr;
-    //  uint8_t const* begin_key_name;
-    //  int begin_key_name_length;
-    //  uint8_t const* end_key_name;
-    //  int end_key_name_length;
+    if (argc!=3) return enif_make_badarg(env);
+    if (get_transaction(env,argv[0],&Tx) == 0) return enif_make_badarg(env);
+    if (enif_inspect_binary(env,argv[1],&Begin) == 0
+            && enif_inspect_iolist_as_binary(env,argv[1], &Begin) == 0) return enif_make_badarg(env);
+    if (enif_inspect_binary(env,argv[2],&End) == 0
+            && enif_inspect_iolist_as_binary(env,argv[2], &End) == 0) return enif_make_badarg(env);
 
-    return error_not_implemented;
+    fdb_transaction_clear_range(Tx->handle, Begin.data, Begin.size, End.data, End.size);
+
+    return enif_make_int(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_commit(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -895,7 +899,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_atomic_op", 6, nif_fdb_transaction_atomic_op},
     {"fdb_transaction_cancel", 1, nif_fdb_transaction_cancel},
     {"fdb_transaction_clear", 2, nif_fdb_transaction_clear},
-    {"fdb_transaction_clear_range", 5, nif_fdb_transaction_clear_range},
+    {"fdb_transaction_clear_range", 3, nif_fdb_transaction_clear_range},
     {"fdb_transaction_commit", 1, nif_fdb_transaction_commit},
     {"fdb_transaction_destroy", 1, nif_fdb_transaction_destroy},
     {"fdb_transaction_get", 2, nif_fdb_transaction_get},

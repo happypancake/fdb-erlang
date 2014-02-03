@@ -28,13 +28,18 @@ transaction_test() ->
 
 range_test() ->
   DB = fdb:init_and_open(?SOLIB),
-  [ok = fdb:set(DB, I, I) || I <- lists:seq(1, 4)],
-  ?assertEqual([{2, 2}, {3, 3},{4, 4}], fdb:get(DB, #select{gte = 2, lte = 4})),
-  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gte = 2, lte =3})),
-  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gt = 1, lt = 4})),
-  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2, lt = 5})),
-  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ gt = 0, lt = 3})),
-  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ lt = 3})),
-  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2})),
-  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gte = 3})).
+  fdb:transact(DB, fun(Tx) ->
+    [ok = fdb:set(Tx, I, I) || I <- lists:seq(1, 9)],
+    ?assertEqual([{2, 2}, {3, 3},{4, 4}], fdb:get(Tx, #select{gte = 2, lte = 4})),
+    ?assertEqual([{2, 2}, {3, 3}], fdb:get(Tx, #select{ gte = 2, lte =3})),
+    ?assertEqual([{2, 2}, {3, 3}], fdb:get(Tx, #select{ gt = 1, lt = 4})),
+    ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gt = 7, lt = 10})),
+    ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ gt = 0, lt = 3})),
+    ?assertEqual([{2, 2}, {3, 3}], fdb:get_range(Tx, 2, 4)),
+    ?assertEqual([{1, 1}, {2, 2}], fdb:get(Tx, #select{ lt = 3})),
+    ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gt = 7})),
+    ?assertEqual([{8, 8}, {9, 9}], fdb:get(Tx, #select{ gte = 8}))%,
+   % fdb:clear_range(Tx, 3, 9),
+   % ?assertEqual([{3, 3}, {8, 8}], fdb:get(Tx, #select{ gt = 2, lt = 9}))
+  end).
 
