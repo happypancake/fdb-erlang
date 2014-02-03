@@ -6,9 +6,7 @@
 -define(SOLIB,"../priv/fdb_nif").
 
 hello_world_test() ->
-  fdb:init(?SOLIB),
-  fdb:api_version(100),
-  {ok, DB} = fdb:open(),
+  DB = fdb:init_and_open(?SOLIB),
   AKey = <<"Hello">>,
   AValue = <<"World">>,
   ok = fdb:set(DB, AKey, AValue),
@@ -17,9 +15,7 @@ hello_world_test() ->
   ?assertEqual(not_found, fdb:get(DB, AKey)).
 
 transaction_test() ->
-  fdb:init(?SOLIB),
-  fdb:api_version(100),
-  {ok, DB} = fdb:open(),
+  DB = fdb:init_and_open(?SOLIB),
   AKey = <<"abc">>,
   AValue = <<"xyz">>,
   ok = fdb:clear(DB, AKey),
@@ -31,13 +27,10 @@ transaction_test() ->
   ok = fdb:clear(DB, AKey).
 
 range_test() ->
-  fdb:init(?SOLIB),
-  fdb:api_version(100),
-  {ok, DB} = fdb:open(),
+  DB = fdb:init_and_open(?SOLIB),
   [ok = fdb:set(DB, I, I) || I <- lists:seq(1, 4)],
-  ?assertEqual([{2, 2}, {3, 3},{4, 4}], fdb:get(DB, #select{gte = 2, lte =4})),
-  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{gte = 2, lte =3})),
-  ?assertEqual([{2, 2}, {3, 3}, {4, 4}], fdb:get(DB, #select{gte = 2})),
-  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2})),
-  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ lt = 3})),
-  ?assertEqual([{1, 1}, {2, 2}, {3, 3}], fdb:get(DB, #select{ lte = 3})).
+  ?assertEqual([{2, 2}, {3, 3},{4, 4}], fdb:get(DB, #select{gte = 2, lte = 4})),
+  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gte = 2, lte =3})),
+  ?assertEqual([{2, 2}, {3, 3}], fdb:get(DB, #select{ gt = 1, lt = 4})),
+  ?assertEqual([{3, 3}, {4, 4}], fdb:get(DB, #select{ gt = 2, lt = 5})),
+  ?assertEqual([{1, 1}, {2, 2}], fdb:get(DB, #select{ gt = 0, lt = 3})).

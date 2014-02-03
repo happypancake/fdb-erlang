@@ -5,7 +5,7 @@
 -export([clear/2]).
 -export([transact/2]).
 -export([bind/2,next/1]).
--export([init_and_open/0]).
+-export([init_and_open/0,init_and_open/1]).
 
 -define (FDB_API_VERSION, 21).
 
@@ -58,12 +58,23 @@ open() ->
   {ok, DbHandle} = DBR, 
   {ok,{db, DbHandle}}.
 
+%% @doc Initializes the driver and returns a database handle
+-spec init_and_open() -> fdb_database().
+%% end
 init_and_open() ->
   init(),
   api_version(100),
   {ok, DB} = open(),
   DB.
 
+%% @doc Initializes the driver and returns a database handle
+-spec init_and_open(SoFile::list()) -> fdb_database().
+%% end
+init_and_open(SoFile) ->
+  init(SoFile),
+  api_version(100),
+  {ok, DB} = open(),
+  DB.
 
 %% @doc Gets a value using a key or multiple values using a selector
 %%
@@ -99,19 +110,17 @@ bind({tx, Transaction}, Select = #select{}) ->
 next(Iterator = #iterator{out_more=0}) -> 
   Iterator#iterator{data = []};
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
-  {FstKey, FstIsEq} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
-  {LstKey, LstIsEq} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
+  {FstKey, FstIsEq, FstOfs} = extract_keys(Select#select.gt, Select#select.gte,<<0>>),
+  {LstKey, LstIsEq, LstOfs} = extract_keys(Select#select.lt, Select#select.lte,<<255,255,255,255>>),
   F = fdb_nif:fdb_transaction_get_range(Transaction, 
-    FstKey, FstIsEq, Select#select.offset_begin,
-    LstKey, LstIsEq, Select#select.offset_end,
+    FstKey, FstIsEq, Select#select.offset_begin + 1 - FstOfs,
+    <<LstKey/binary>>, LstIsEq, Select#select.offset_end + LstOfs,
     Select#select.limit, 
     Select#select.target_bytes, 
     Select#select.streaming_mode, 
     Iteration, 
     Select#select.is_snapshot, 
     Select#select.is_reverse),
-  io:format("fst: ~p", [{ FstKey, FstIsEq, Select#select.offset_begin}]),
-  io:format("lst: ~p", [{ LstKey, LstIsEq, Select#select.offset_end}]),
   {ok, {EncodedData, OutMore}} = future_get(F, keyvalue_array),
   Data = lists:map(fun({X, Y})-> {tuple:unpack(X), binary_to_term(Y)} end, EncodedData),
   Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = OutMore}.
@@ -124,9 +133,9 @@ iterate_all(Iterator, Result) ->
   Next = next(Iterator),
   iterate_all(Next, Result++Next#iterator.data). 
 
-extract_keys(nil, nil, Default) -> {Default, true};
-extract_keys(nil, Value, _) -> { tuple:pack(Value), true };
-extract_keys(Value, nil, _) -> { tuple:pack(Value), false }.
+extract_keys(nil, nil, Default) -> {Default, false, 1};
+extract_keys(nil, Value, _) -> { tuple:pack(Value), true, 1 };
+extract_keys(Value, nil, _) -> { tuple:pack(Value), false, 0 }.
 
 %% @doc sets a key and value
 %% Existing values will be overwritten
