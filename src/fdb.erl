@@ -108,13 +108,19 @@ get({tx, Tx}, Key, DefaultValue) ->
     _ -> binary_to_term(Result)
   end.
 
+%% @doc Binds a range of data to an iterator; use `fdb:next` to iterate it
+-spec bind(fdb_handle(), #select{}) -> #iterator{}.
+%% @end
 bind({db, DB}, Select = #select{}) ->
   transact({db,DB}, fun(Tx) -> bind({tx, Tx}, Select) end);
 bind({tx, Transaction}, Select = #select{}) ->
   #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
-next(Iterator = #iterator{out_more=0}) -> 
-  Iterator#iterator{data = []};
+%% @doc Get data of an iterator; returns the iterator or `done` when finished
+-spec next(#iterator{}) -> (#iterator{} | done).
+%% @end
+next(#iterator{out_more=0}) -> 
+  done;
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
   {LstKey, LstIsEq, LstOfs} = lst_lt(Select#select.lt, Select#select.lte),
@@ -132,12 +138,13 @@ next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Sele
   Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = OutMore}.
 
 iterate_all(Iterator) ->
-  iterate_all(Iterator, []).
-iterate_all(#iterator{out_more = 0}, Result) ->
+  iterate_all(next(Iterator), []).
+iterate_all(done, Result) ->
   Result;
 iterate_all(Iterator, Result) ->
+  NewResult = Result++Iterator#iterator.data,
   Next = next(Iterator),
-  iterate_all(Next, Result++Next#iterator.data). 
+  iterate_all(Next, NewResult). 
 
 fst_gt(nil, nil) -> {<<0>>, true, 0};
 fst_gt(nil, Value) -> { tuple:pack(Value), true, 0 };
