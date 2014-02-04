@@ -95,181 +95,78 @@ static fdb_bool_t get_boolean(ErlNifEnv* env, ERL_NIF_TERM atom, fdb_bool_t* val
     else return 0;
 }
 
+#define CMP_ATOM(cmp_atom,result) \
+    if (enif_compare( atom, cmp_atom) == 0) { \
+      (*mode) = result; \
+      return 1;\
+    }
+
 static int get_FDBStreamingMode(ErlNifEnv* env, ERL_NIF_TERM atom, FDBStreamingMode* mode) 
 {
-    if (enif_compare( atom, atom_iterator) == 0) {
-      (*mode) = FDB_STREAMING_MODE_ITERATOR; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_want_all) == 0) {
-      (*mode) = FDB_STREAMING_MODE_WANT_ALL;
-      return 1;
-    }
-    if (enif_compare( atom, atom_small) == 0) {
-      (*mode) = FDB_STREAMING_MODE_SMALL;
-      return 1;
-    }
-    if (enif_compare( atom, atom_medium) == 0) {
-      (*mode) = FDB_STREAMING_MODE_MEDIUM;
-      return 1;
-    }
-    if (enif_compare( atom, atom_large) == 0) {
-      (*mode) = FDB_STREAMING_MODE_LARGE;
-      return 1;
-    }
-    if (enif_compare( atom, atom_serial) == 0) {
-      (*mode) =FDB_STREAMING_MODE_SERIAL;
-      return 1;
-    }
-    if (enif_compare( atom, atom_exact) == 0) {
-      (*mode) =FDB_STREAMING_MODE_EXACT;
-      return 1;
-    }
-    return 0;
+   CMP_ATOM(atom_iterator,FDB_STREAMING_MODE_ITERATOR); 
+   CMP_ATOM(atom_want_all,FDB_STREAMING_MODE_WANT_ALL);
+   CMP_ATOM(atom_small,FDB_STREAMING_MODE_SMALL);
+   CMP_ATOM(atom_medium,FDB_STREAMING_MODE_MEDIUM);
+   CMP_ATOM(atom_serial,FDB_STREAMING_MODE_SERIAL);
+   CMP_ATOM(atom_location_cache_size,FDB_DB_OPTION_LOCATION_CACHE_SIZE); 
+   CMP_ATOM(atom_machine_id,FDB_DB_OPTION_MACHINE_ID); 
+   CMP_ATOM(atom_local_address,FDB_NET_OPTION_LOCAL_ADDRESS); 
+   CMP_ATOM(atom_trace_enable,FDB_NET_OPTION_TRACE_ENABLE); 
+   return 0;
 }
 
 static int get_FDBDatabaseOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBDatabaseOption* mode) 
 {
-    if (enif_compare( atom, atom_location_cache_size) == 0) {
-      (*mode) = FDB_DB_OPTION_LOCATION_CACHE_SIZE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_max_watches) == 0) {
-      (*mode) = FDB_DB_OPTION_MAX_WATCHES; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_machine_id) == 0) {
-      (*mode) = FDB_DB_OPTION_MACHINE_ID; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_datacenter_id) == 0) {
-      (*mode) = FDB_DB_OPTION_DATACENTER_ID; 
-      return 1;
-    }
+    CMP_ATOM(atom_location_cache_size,FDB_DB_OPTION_LOCATION_CACHE_SIZE); 
+    CMP_ATOM(atom_max_watches,FDB_DB_OPTION_MAX_WATCHES);
+    CMP_ATOM(atom_machine_id,FDB_DB_OPTION_MACHINE_ID); 
+    CMP_ATOM(atom_datacenter_id,FDB_DB_OPTION_DATACENTER_ID); 
     return 0;
-}
+} 
 
 static int get_FDBNetworkOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBNetworkOption* mode) 
 {
-    if (enif_compare( atom, atom_local_address) == 0) {
-      (*mode) = FDB_NET_OPTION_LOCAL_ADDRESS; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_cluster_file) == 0) {
-      (*mode) = FDB_NET_OPTION_CLUSTER_FILE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_trace_enable) == 0) {
-      (*mode) = FDB_NET_OPTION_TRACE_ENABLE; 
-      return 1;
-    }
+    CMP_ATOM(atom_local_address,FDB_NET_OPTION_LOCAL_ADDRESS); 
+    CMP_ATOM(atom_cluster_file,FDB_NET_OPTION_CLUSTER_FILE); 
+    CMP_ATOM(atom_trace_enable,FDB_NET_OPTION_TRACE_ENABLE); 
     return 0;
 }
 
 static int get_FDBMutationType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBMutationType* mode) 
 {
-    if (enif_compare( atom, atom_add) == 0) {
-      (*mode) = FDB_MUTATION_TYPE_ADD; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_and) == 0) {
-      (*mode) = FDB_MUTATION_TYPE_AND; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_or) == 0) {
-      (*mode) = FDB_MUTATION_TYPE_OR; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_xor) == 0) {
-      (*mode) = FDB_MUTATION_TYPE_XOR; 
-      return 1;
-    }
+    CMP_ATOM(atom,FDB_MUTATION_TYPE_ADD); 
+    CMP_ATOM(atom_and,FDB_MUTATION_TYPE_AND); 
+    CMP_ATOM(atom_or,FDB_MUTATION_TYPE_OR); 
+    CMP_ATOM(atom_xor,FDB_MUTATION_TYPE_XOR); 
     return 0;
 }
 
 static int get_FDBConflictRangeType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBConflictRangeType* mode) 
 {
-    if (enif_compare( atom, atom_read) == 0) {
-      (*mode) = FDB_CONFLICT_RANGE_TYPE_READ; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_write) == 0) {
-      (*mode) = FDB_CONFLICT_RANGE_TYPE_WRITE; 
-      return 1;
-    }
+    CMP_ATOM(atom_read,FDB_CONFLICT_RANGE_TYPE_READ); 
+    CMP_ATOM(atom_write,FDB_CONFLICT_RANGE_TYPE_WRITE); 
     return 0;
 }
 
 static int get_FDBTransactionOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBTransactionOption* mode)
 {
-    if (enif_compare( atom, atom_causal_write_risky) == 0) {
-      (*mode) = FDB_TR_OPTION_CAUSAL_WRITE_RISKY; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_causal_read_risky) == 0) {
-      (*mode) = FDB_TR_OPTION_CAUSAL_READ_RISKY; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_causal_read_disable) == 0) {
-      (*mode) = FDB_TR_OPTION_CAUSAL_READ_DISABLE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_next_write_no_write_conflict_range) == 0) {
-      (*mode) = FDB_TR_OPTION_NEXT_WRITE_NO_WRITE_CONFLICT_RANGE;
-      return 1;
-    }
-    if (enif_compare( atom, atom_check_writes_enable) == 0) {
-      (*mode) = FDB_TR_OPTION_CHECK_WRITES_ENABLE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_read_your_writes_disable) == 0) {
-      (*mode) = FDB_TR_OPTION_READ_YOUR_WRITES_DISABLE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_read_ahead_disable) == 0) {
-      (*mode) = FDB_TR_OPTION_READ_AHEAD_DISABLE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_durability_datacenter) == 0) {
-      (*mode) = FDB_TR_OPTION_DURABILITY_DATACENTER; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_durability_risky) == 0) {
-      (*mode) = FDB_TR_OPTION_DURABILITY_RISKY; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_durability_dev_null_is_web_scale) == 0) {
-      (*mode) = FDB_TR_OPTION_DURABILITY_DEV_NULL_IS_WEB_SCALE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_priority_system_immediate) == 0) {
-      (*mode) = FDB_TR_OPTION_PRIORITY_SYSTEM_IMMEDIATE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_priority_batch) == 0) {
-      (*mode) = FDB_TR_OPTION_PRIORITY_BATCH; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_initialize_new_database) == 0) {
-      (*mode) = FDB_TR_OPTION_INITIALIZE_NEW_DATABASE; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_access_system_keys) == 0) {
-      (*mode) = FDB_TR_OPTION_ACCESS_SYSTEM_KEYS; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_debug_dump) == 0) {
-      (*mode) = FDB_TR_OPTION_DEBUG_DUMP; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_timeout) == 0) {
-      (*mode) = FDB_TR_OPTION_TIMEOUT; 
-      return 1;
-    }
-    if (enif_compare( atom, atom_retry_limit) == 0) {
-      (*mode) = FDB_TR_OPTION_RETRY_LIMIT; 
-      return 1;
-    }
+    CMP_ATOM(atom_causal_write_risky,FDB_TR_OPTION_CAUSAL_WRITE_RISKY); 
+    CMP_ATOM(atom_causal_read_risky,FDB_TR_OPTION_CAUSAL_READ_RISKY); 
+    CMP_ATOM(atom_causal_read_disable,FDB_TR_OPTION_CAUSAL_READ_DISABLE); 
+    CMP_ATOM(atom_next_write_no_write_conflict_range,FDB_TR_OPTION_NEXT_WRITE_NO_WRITE_CONFLICT_RANGE);
+    CMP_ATOM(atom_check_writes_enable,FDB_TR_OPTION_CHECK_WRITES_ENABLE); 
+    CMP_ATOM(atom_read_your_writes_disable,FDB_TR_OPTION_READ_YOUR_WRITES_DISABLE); 
+    CMP_ATOM(atom_read_ahead_disable,FDB_TR_OPTION_READ_AHEAD_DISABLE); 
+    CMP_ATOM(atom_durability_datacenter,FDB_TR_OPTION_DURABILITY_DATACENTER); 
+    CMP_ATOM(atom_durability_risky,FDB_TR_OPTION_DURABILITY_RISKY); 
+    CMP_ATOM(atom_durability_dev_null_is_web_scale,FDB_TR_OPTION_DURABILITY_DEV_NULL_IS_WEB_SCALE); 
+    CMP_ATOM(atom_priority_system_immediate,FDB_TR_OPTION_PRIORITY_SYSTEM_IMMEDIATE); 
+    CMP_ATOM(atom_priority_batch,FDB_TR_OPTION_PRIORITY_BATCH); 
+    CMP_ATOM(atom_initialize_new_database,FDB_TR_OPTION_INITIALIZE_NEW_DATABASE); 
+    CMP_ATOM(atom_access_system_keys,FDB_TR_OPTION_ACCESS_SYSTEM_KEYS); 
+    CMP_ATOM(atom_debug_dump,FDB_TR_OPTION_DEBUG_DUMP); 
+    CMP_ATOM(atom_timeout,FDB_TR_OPTION_TIMEOUT); 
+    CMP_ATOM(atom_retry_limit,FDB_TR_OPTION_RETRY_LIMIT); 
     return 0;
 }
 
