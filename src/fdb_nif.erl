@@ -30,9 +30,6 @@ fdb_transaction_cancel(_) ->
 fdb_transaction_destroy(_) ->
   nif_not_loaded.
   
-fdb_cluster_configure_database() -> 
-  nif_not_loaded.
-
 fdb_cluster_create_database(_c) ->
   nif_not_loaded.
 
