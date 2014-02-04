@@ -679,23 +679,32 @@ static ERL_NIF_TERM nif_fdb_transaction_get(ErlNifEnv* env, int argc, const ERL_
 
 static ERL_NIF_TERM nif_fdb_transaction_get_addresses_for_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=3) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary Key;
+    enif_future_t *Future = wrap_future(NULL);
 
-    // FDBTransaction* tr;
-    //  uint8_t const* key_name;
-    //  int key_name_length)
+    if (  argc!=2
+       || get_transaction(env,argv[0],&Tx) == 0
+       || get_binary(env,argv[1],&Key) == 0) 
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    Future->handle = fdb_transaction_get_addresses_for_key(Tx->handle,Key.data,Key.size);
+
+    return mk_and_release_resource(env,Future);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_get_committed_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=2) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    int64_t out_version;
 
-    //  FDBTransaction* tr;
-    //  int64_t* out_version;
+    if (  argc!=1
+       || get_transaction(env, argv[0], &Tx) == 0) 
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    fdb_error_t err = fdb_transaction_get_committed_version(Tx->handle,&out_version);
+
+    return mk_result(env, err, enif_make_int(env, out_version));
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_get_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -948,7 +957,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_commit", 1, nif_fdb_transaction_commit},
     {"fdb_transaction_destroy", 1, nif_fdb_transaction_destroy},
     {"fdb_transaction_get", 2, nif_fdb_transaction_get},
-    {"fdb_transaction_get_addresses_for_key", 3, nif_fdb_transaction_get_addresses_for_key},
+    {"fdb_transaction_get_addresses_for_key", 2, nif_fdb_transaction_get_addresses_for_key},
     {"fdb_transaction_get_committed_version", 2, nif_fdb_transaction_get_committed_version},
     {"fdb_transaction_get_key", 6, nif_fdb_transaction_get_key},
     {"fdb_transaction_get_range", 13, nif_fdb_transaction_get_range},
