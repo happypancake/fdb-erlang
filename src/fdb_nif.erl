@@ -42,9 +42,6 @@ fdb_cluster_set_option(_c, _option, _value) ->
 fdb_transaction_get_addresses_for_key(_,_,_) ->  
   nif_not_loaded.
 
-fdb_transaction_watch(_,_) ->  
-  nif_not_loaded.
-
 fdb_create_cluster() ->
   nif_not_loaded.
 
@@ -102,7 +99,7 @@ fdb_future_release_memory(_f) ->
 fdb_get_error(_code) ->
   nif_not_loaded.
 
-fdb_network_set_option(_option, _value, _value_length) ->
+fdb_network_set_option(_option, _value) ->
   nif_not_loaded.
 
 fdb_select_api_version(_runtime_version) ->

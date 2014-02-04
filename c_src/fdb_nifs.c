@@ -28,6 +28,11 @@ static ERL_NIF_TERM atom_max_watches;
 static ERL_NIF_TERM atom_machine_id;
 static ERL_NIF_TERM atom_datacenter_id;
 
+//FDBNetworkOption enum
+static ERL_NIF_TERM atom_local_address;
+static ERL_NIF_TERM atom_cluster_file;
+static ERL_NIF_TERM atom_trace_enable;
+
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
     ERL_NIF_TERM res;
@@ -115,6 +120,23 @@ static int get_FDBDatabaseOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBDatabaseO
     return 0;
 }
 
+static int get_FDBNetworkOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBNetworkOption* mode) 
+{
+    if (enif_compare( atom, atom_local_address) == 0) {
+      (*mode) = FDB_NET_OPTION_LOCAL_ADDRESS; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_cluster_file) == 0) {
+      (*mode) = FDB_NET_OPTION_CLUSTER_FILE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_trace_enable) == 0) {
+      (*mode) = FDB_NET_OPTION_TRACE_ENABLE; 
+      return 1;
+    }
+    return 0;
+}
+
 static ERL_NIF_TERM make_binary(ErlNifEnv *env, const uint8_t *data, int size)
 {
 
@@ -162,6 +184,10 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_max_watches = enif_make_atom(env, "max_watches");
     atom_machine_id = enif_make_atom(env, "machine_id");
     atom_datacenter_id = enif_make_atom(env, "datacenter_id");
+    //FDBNetworkOption enum
+    atom_local_address = enif_make_atom(env, "atom_local_address");
+    atom_cluster_file = enif_make_atom(env, "atom_cluster_file");
+    atom_trace_enable = enif_make_atom(env, "trace_enable");
 
     if (register_fdb_resources(env)!=0)
         return -1;
@@ -528,13 +554,18 @@ static ERL_NIF_TERM nif_fdb_get_error(ErlNifEnv* env, int argc, const ERL_NIF_TE
 
 static ERL_NIF_TERM nif_fdb_network_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=3) return enif_make_badarg(env);
+    FDBNetworkOption option;
+    ErlNifBinary Key;
+    fdb_error_t err;
 
-    //  FDBNetworkOption option;
-    //  uint8_t const* value;
-    //  int value_length;
+    if (  argc!=2
+       || get_FDBNetworkOption(env, argv[0], &option) == 0
+       || get_binary(env, argv[1], &Key) == 0) 
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    err = fdb_network_set_option(option, Key.data, Key.size);
+
+    return enif_make_int(env, err);
 }
 
 static void* thr_event_loop(void* obj)
@@ -965,7 +996,7 @@ static ErlNifFunc nifs[] =
     {"fdb_future_is_ready", 1, nif_fdb_future_is_ready},
     {"fdb_future_release_memory", 1, nif_fdb_future_release_memory},
     {"fdb_get_error", 1, nif_fdb_get_error},
-    {"fdb_network_set_option", 3, nif_fdb_network_set_option},
+    {"fdb_network_set_option", 2, nif_fdb_network_set_option},
     {"fdb_run_network", 0, nif_fdb_run_network},
     {"fdb_select_api_version", 1, nif_fdb_select_api_version},
     {"fdb_setup_network", 0, nif_fdb_setup_network},
