@@ -149,7 +149,7 @@ fdb_transaction_set(_tr, _key, _value)
     andalso is_binary(_value)->
   nif_not_loaded.
 
-fdb_transaction_set_option(_tr, _option, _value, _value_length) ->
+fdb_transaction_set_option(_tr, _option, _value) ->
   nif_not_loaded.
 
 fdb_transaction_set_read_version(_tr, _version) ->

@@ -43,6 +43,25 @@ static ERL_NIF_TERM atom_and;
 static ERL_NIF_TERM atom_or;
 static ERL_NIF_TERM atom_xor;
 
+// FDBTransactionOption enum
+static ERL_NIF_TERM atom_causal_write_risky;
+static ERL_NIF_TERM atom_causal_read_risky;
+static ERL_NIF_TERM atom_causal_read_disable;
+static ERL_NIF_TERM atom_next_write_no_write_conflict_range;
+static ERL_NIF_TERM atom_check_writes_enable;
+static ERL_NIF_TERM atom_read_your_writes_disable;
+static ERL_NIF_TERM atom_read_ahead_disable;
+static ERL_NIF_TERM atom_durability_datacenter;
+static ERL_NIF_TERM atom_durability_risky;
+static ERL_NIF_TERM atom_durability_dev_null_is_web_scale;
+static ERL_NIF_TERM atom_priority_system_immediate;
+static ERL_NIF_TERM atom_priority_batch;
+static ERL_NIF_TERM atom_initialize_new_database;
+static ERL_NIF_TERM atom_access_system_keys;
+static ERL_NIF_TERM atom_debug_dump;
+static ERL_NIF_TERM atom_timeout;
+static ERL_NIF_TERM atom_retry_limit;
+
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
     ERL_NIF_TERM res;
@@ -181,6 +200,79 @@ static int get_FDBConflictRangeType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBConfli
     return 0;
 }
 
+static int get_FDBTransactionOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBTransactionOption* mode)
+{
+    if (enif_compare( atom, atom_causal_write_risky) == 0) {
+      (*mode) = FDB_TR_OPTION_CAUSAL_WRITE_RISKY; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_causal_read_risky) == 0) {
+      (*mode) = FDB_TR_OPTION_CAUSAL_READ_RISKY; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_causal_read_disable) == 0) {
+      (*mode) = FDB_TR_OPTION_CAUSAL_READ_DISABLE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_next_write_no_write_conflict_range) == 0) {
+      (*mode) = FDB_TR_OPTION_NEXT_WRITE_NO_WRITE_CONFLICT_RANGE;
+      return 1;
+    }
+    if (enif_compare( atom, atom_check_writes_enable) == 0) {
+      (*mode) = FDB_TR_OPTION_CHECK_WRITES_ENABLE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_read_your_writes_disable) == 0) {
+      (*mode) = FDB_TR_OPTION_READ_YOUR_WRITES_DISABLE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_read_ahead_disable) == 0) {
+      (*mode) = FDB_TR_OPTION_READ_AHEAD_DISABLE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_durability_datacenter) == 0) {
+      (*mode) = FDB_TR_OPTION_DURABILITY_DATACENTER; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_durability_risky) == 0) {
+      (*mode) = FDB_TR_OPTION_DURABILITY_RISKY; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_durability_dev_null_is_web_scale) == 0) {
+      (*mode) = FDB_TR_OPTION_DURABILITY_DEV_NULL_IS_WEB_SCALE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_priority_system_immediate) == 0) {
+      (*mode) = FDB_TR_OPTION_PRIORITY_SYSTEM_IMMEDIATE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_priority_batch) == 0) {
+      (*mode) = FDB_TR_OPTION_PRIORITY_BATCH; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_initialize_new_database) == 0) {
+      (*mode) = FDB_TR_OPTION_INITIALIZE_NEW_DATABASE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_access_system_keys) == 0) {
+      (*mode) = FDB_TR_OPTION_ACCESS_SYSTEM_KEYS; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_debug_dump) == 0) {
+      (*mode) = FDB_TR_OPTION_DEBUG_DUMP; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_timeout) == 0) {
+      (*mode) = FDB_TR_OPTION_TIMEOUT; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_retry_limit) == 0) {
+      (*mode) = FDB_TR_OPTION_RETRY_LIMIT; 
+      return 1;
+    }
+    return 0;
+}
+
 static ERL_NIF_TERM make_binary(ErlNifEnv *env, const uint8_t *data, int size)
 {
 
@@ -240,6 +332,24 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_and = enif_make_atom(env, "and");
     atom_or = enif_make_atom(env, "or");
     atom_xor = enif_make_atom(env, "xor");
+    //FDBTransactionOption
+    atom_causal_write_risky = enif_make_atom(env, "causal_write_risky");
+    atom_causal_read_risky = enif_make_atom(env, "causal_read_risky");
+    atom_causal_read_disable = enif_make_atom(env, "causal_read_disable");
+    atom_next_write_no_write_conflict_range = enif_make_atom(env, "next_write_no_write_conflict_range");
+    atom_check_writes_enable = enif_make_atom(env, "check_writes_enable");
+    atom_read_your_writes_disable = enif_make_atom(env, "read_your_writes_disable");
+    atom_read_ahead_disable = enif_make_atom(env, "read_ahead_disable");
+    atom_durability_datacenter = enif_make_atom(env, "durability_datacenter");
+    atom_durability_risky = enif_make_atom(env, "durability_risky");
+    atom_durability_dev_null_is_web_scale = enif_make_atom(env, "durability_dev_null_is_web_scale");
+    atom_priority_system_immediate = enif_make_atom(env, "priority_system_immediate");
+    atom_priority_batch = enif_make_atom(env, "priority_batch");
+    atom_initialize_new_database = enif_make_atom(env, "initialize_new_database");
+    atom_access_system_keys = enif_make_atom(env, "access_system_keys");
+    atom_debug_dump = enif_make_atom(env, "debug_dump");
+    atom_timeout = enif_make_atom(env, "timeout");
+    atom_retry_limit = enif_make_atom(env, "retry_limit");
 
     if (register_fdb_resources(env)!=0)
         return -1;
@@ -366,7 +476,6 @@ static ERL_NIF_TERM nif_fdb_database_set_option(ErlNifEnv* env, int argc, const 
 
 static ERL_NIF_TERM nif_fdb_future_block_until_ready(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    //FDBFuture* f;
     enif_future_t *f;
     if (  argc!=1 
        || get_future(env,argv[0],&f) == 0)
@@ -395,8 +504,6 @@ static ERL_NIF_TERM nif_fdb_future_destroy(ErlNifEnv* env, int argc, const ERL_N
 
 static ERL_NIF_TERM nif_fdb_future_get_cluster(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    //FDBFuture* f;
-    //FDBCluster** out_cluster;
     enif_future_t *f;
     enif_cluster_t *out_cluster = wrap_cluster(NULL);
     if (argc!=1|| get_future(env,argv[0],&f) == 0)
@@ -944,14 +1051,20 @@ static ERL_NIF_TERM nif_fdb_transaction_set(ErlNifEnv* env, int argc, const ERL_
 
 static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=4) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    FDBTransactionOption option;
+    fdb_error_t err;
 
-    //  FDBTransaction* tr;
-    //  FDBTransactionOption option;
-    //  uint8_t const* value;
-    //  int value_length;
+    ErlNifBinary Value;
+    if (  argc!=3
+       || get_transaction(env,argv[0], &Tx) == 0
+       || get_FDBTransactionOption(env, argv[1], &option) == 0
+       || get_binary(env,argv[2],&Value) == 0)
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    err = fdb_transaction_set_option(Tx->handle,option, Value.data, Value.size);
+    
+    return enif_make_int(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -1082,7 +1195,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_on_error", 2, nif_fdb_transaction_on_error},
     {"fdb_transaction_reset", 1, nif_fdb_transaction_reset},
     {"fdb_transaction_set", 3, nif_fdb_transaction_set},
-    {"fdb_transaction_set_option", 4, nif_fdb_transaction_set_option},
+    {"fdb_transaction_set_option", 3, nif_fdb_transaction_set_option},
     {"fdb_transaction_set_read_version", 2, nif_fdb_transaction_set_read_version},
     {"fdb_transaction_watch", 2, nif_fdb_transaction_watch},
     {"new_cluster", 0, nif_new_cluster},
