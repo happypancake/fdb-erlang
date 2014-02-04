@@ -132,7 +132,7 @@ fdb_transaction_get_addresses_for_key(_tr, _key_name) ->
 fdb_transaction_get_committed_version(_tr, _out_version) ->
   nif_not_loaded.
 
-fdb_transaction_get_key(_tr, _key_name, _key_name_length, _or_equal, _offset, _snapshot) ->
+fdb_transaction_get_key(_tr, _key, _or_equal, _offset, _snapshot) ->
   nif_not_loaded.
 
 fdb_transaction_get_range(_tr, _begin_key_name, _begin_or_equal, _begin_offset, _end_key_name, _end_or_equal, _end_offset, _limit, _target_bytes, _mode, _iteration, _snapshot, _reverse) ->

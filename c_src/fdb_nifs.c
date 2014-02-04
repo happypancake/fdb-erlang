@@ -726,16 +726,25 @@ static ERL_NIF_TERM nif_fdb_transaction_get_committed_version(ErlNifEnv* env, in
 
 static ERL_NIF_TERM nif_fdb_transaction_get_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=6) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary key;
+    fdb_bool_t or_equal;
+    int offset;
+    fdb_bool_t snapshot;
+    enif_future_t *Future = wrap_future(NULL);
+    
+    if (  argc!=5
+       || get_transaction(env,argv[0],&Tx) == 0
+       || get_binary(env,argv[1],&key) == 0
+       || get_boolean(env, argv[2], &or_equal) == 0
+       || enif_get_int(env, argv[3], &offset) == 0
+       || get_boolean(env, argv[4], &snapshot) == 0)
+      return enif_make_badarg(env);
 
-    //  FDBTransaction* tr;
-    //  uint8_t const* key_name;
-    //  int key_name_length;
-    //  fdb_bool_t or_equal;
-    //  int offset;
-    //  fdb_bool_t snapshot;
+    Future->handle = fdb_transaction_get_key(Tx->handle,
+       key.data, key.size, or_equal, offset, snapshot);
 
-    return error_not_implemented;
+    return mk_and_release_resource(env,Future);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
