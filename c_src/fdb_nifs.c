@@ -800,11 +800,16 @@ static ERL_NIF_TERM nif_fdb_transaction_get_range_selector(ErlNifEnv* env, int a
 
 static ERL_NIF_TERM nif_fdb_transaction_get_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=1) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    enif_future_t *Future = wrap_future(NULL);
 
-    //  FDBTransaction* tr;
+    if (  argc!=1
+       || get_transaction(env,argv[0],&Tx) == 0)
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    Future->handle = fdb_transaction_get_read_version(Tx->handle);
+
+    return mk_and_release_resource(env,Future);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_on_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -864,12 +869,17 @@ static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, con
 
 static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=2) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    int64_t version;
 
-    //  FDBTransaction* tr;
-    //  int64_t version;
+    if (  argc!=2
+       || get_transaction(env,argv[0],&Tx) == 0
+       || enif_get_int64(env,argv[1],&version) == 0)
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    fdb_transaction_set_read_version(Tx->handle,version);
+
+    return enif_make_int(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_watch(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
