@@ -12,6 +12,8 @@ static ERL_NIF_TERM atom_undefined;
 static ERL_NIF_TERM atom_true;
 static ERL_NIF_TERM atom_false;
 static ERL_NIF_TERM error_not_implemented;
+
+// FDBStreamingMode enum
 static ERL_NIF_TERM atom_iterator;
 static ERL_NIF_TERM atom_want_all;
 static ERL_NIF_TERM atom_small;
@@ -20,6 +22,11 @@ static ERL_NIF_TERM atom_large;
 static ERL_NIF_TERM atom_serial;
 static ERL_NIF_TERM atom_exact;
 
+// FDBDatabaseOption enum
+static ERL_NIF_TERM atom_location_cache_size;
+static ERL_NIF_TERM atom_max_watches;
+static ERL_NIF_TERM atom_machine_id;
+static ERL_NIF_TERM atom_datacenter_id;
 
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
@@ -87,6 +94,27 @@ static int get_FDBStreamingMode(ErlNifEnv* env, ERL_NIF_TERM atom, FDBStreamingM
     return 0;
 }
 
+static int get_FDBDatabaseOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBDatabaseOption* mode) 
+{
+    if (enif_compare( atom, atom_location_cache_size) == 0) {
+      (*mode) = FDB_DB_OPTION_LOCATION_CACHE_SIZE; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_max_watches) == 0) {
+      (*mode) = FDB_DB_OPTION_MAX_WATCHES; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_machine_id) == 0) {
+      (*mode) = FDB_DB_OPTION_MACHINE_ID; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_datacenter_id) == 0) {
+      (*mode) = FDB_DB_OPTION_DATACENTER_ID; 
+      return 1;
+    }
+    return 0;
+}
+
 static ERL_NIF_TERM make_binary(ErlNifEnv *env, const uint8_t *data, int size)
 {
 
@@ -121,6 +149,7 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_not_found = enif_make_atom(env,"not_found");
     atom_undefined = enif_make_atom(env,"undefined");
     error_not_implemented = mk_error(env,"not_implemented");
+    // FDBStreamingMode enum
     atom_iterator = enif_make_atom(env, "iterator");
     atom_want_all = enif_make_atom(env, "want_all");
     atom_small = enif_make_atom(env, "small");
@@ -128,6 +157,11 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_large = enif_make_atom(env, "large");
     atom_serial = enif_make_atom(env, "serial");
     atom_exact = enif_make_atom(env, "exact");
+    // FDBDatabaseOption enum
+    atom_location_cache_size = enif_make_atom(env, "location_cache_size");
+    atom_max_watches = enif_make_atom(env, "max_watches");
+    atom_machine_id = enif_make_atom(env, "machine_id");
+    atom_datacenter_id = enif_make_atom(env, "datacenter_id");
 
     if (register_fdb_resources(env)!=0)
         return -1;
@@ -237,14 +271,19 @@ static ERL_NIF_TERM nif_fdb_database_destroy(ErlNifEnv* env, int argc, const ERL
 
 static ERL_NIF_TERM nif_fdb_database_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=4) return enif_make_badarg(env);
+    enif_database_t *DB;
+    FDBDatabaseOption opt;
+    ErlNifBinary value;
+    if (  argc!=3
+       || get_database(env, argv[0], &DB) == 0
+       || get_FDBDatabaseOption(env, argv[1], &opt) == 0
+       || get_binary(env, argv[2], &value) == 0)
+      return enif_make_badarg(env);
+ 
+    fdb_error_t err = fdb_database_set_option(DB->handle, opt, value.data, value.size);
 
-    //  FDBDatabase* d;
-    //  FDBDatabaseOption option;
-    //  uint8_t const* value;
-    //  int value_length;
 
-    return error_not_implemented;
+    return enif_make_int(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_future_block_until_ready(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -890,12 +929,12 @@ static ErlNifFunc nifs[] =
     {"fdb_cluster_create_database", 1, nif_fdb_cluster_create_database},
     {"fdb_cluster_create_database", 2, nif_fdb_cluster_create_database},
     {"fdb_cluster_destroy", 1, nif_fdb_cluster_destroy},
-    {"fdb_cluster_set_option", 4, nif_fdb_cluster_set_option},
+    {"fdb_cluster_set_option", 3, nif_fdb_cluster_set_option},
     {"fdb_create_cluster", 0, nif_fdb_create_cluster},
     {"fdb_create_cluster", 1, nif_fdb_create_cluster},
     {"fdb_database_create_transaction", 1, nif_fdb_database_create_transaction},
     {"fdb_database_destroy", 1, nif_fdb_database_destroy},
-    {"fdb_database_set_option", 4, nif_fdb_database_set_option},
+    {"fdb_database_set_option", 3, nif_fdb_database_set_option},
     {"fdb_future_block_until_ready", 1, nif_fdb_future_block_until_ready},
     {"fdb_future_cancel", 1, nif_fdb_future_cancel},
     {"fdb_future_destroy", 1, nif_fdb_future_destroy},

@@ -36,7 +36,7 @@ fdb_cluster_create_database(_c, _db_name) ->
 fdb_cluster_destroy(_c) ->
   nif_not_loaded.
 
-fdb_cluster_set_option(_c, _option, _value, _value_length) ->
+fdb_cluster_set_option(_c, _option, _value) ->
   nif_not_loaded.
   
 fdb_transaction_get_addresses_for_key(_,_,_) ->  
@@ -57,7 +57,7 @@ fdb_database_create_transaction(_d) ->
 fdb_database_destroy(_d) ->
   nif_not_loaded.
 
-fdb_database_set_option(_d, _option, _value, _value_length) ->
+fdb_database_set_option(_d, _option, _value) ->
   nif_not_loaded.
 
 fdb_future_block_until_ready(_f) ->
