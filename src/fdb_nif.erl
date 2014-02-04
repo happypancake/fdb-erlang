@@ -9,9 +9,6 @@ eat_reload({error,{reload,_}}) ->
 eat_reload(Other) -> 
   Other.
   
-fdb_get_max_api_version(_)  ->
-  nif_not_loaded.
-
 fdb_run_network()  ->
   nif_not_loaded.
 
@@ -81,7 +78,7 @@ fdb_future_get_database(_f) ->
 fdb_future_get_error(_f) ->
   nif_not_loaded.
 
-fdb_future_get_key(_f, _out_key, _out_key_length) ->
+fdb_future_get_key(_f) ->
   nif_not_loaded.
 
 fdb_future_get_keyvalue_array(_f) ->
