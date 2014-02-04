@@ -459,21 +459,15 @@ static ERL_NIF_TERM nif_fdb_future_get_value(ErlNifEnv* env, int argc, const ERL
 
 static ERL_NIF_TERM nif_fdb_future_get_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=2) return enif_make_badarg(env);
+    enif_future_t *Future;
+    int64_t version;
 
-    //  FDBFuture* f;
-    //  int64_t* out_version;
-
-    return error_not_implemented;
-}
-
-static ERL_NIF_TERM nif_fdb_future_is_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{
-    if (argc!=1) return enif_make_badarg(env);
-
-    //  FDBFuture* f;
-
-    return error_not_implemented;
+    if (  argc!=1
+       || get_future(env,argv[0],&Future) == 0) 
+      return enif_make_badarg(env);
+   
+    fdb_error_t err = fdb_future_get_version(Future->handle, &version);
+    return mk_result(env, err, enif_make_int(env, version));
 }
 
 static ERL_NIF_TERM nif_fdb_future_is_ready(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -945,8 +939,7 @@ static ErlNifFunc nifs[] =
     {"fdb_future_get_keyvalue_array", 1, nif_fdb_future_get_keyvalue_array},
     {"fdb_future_get_string_array", 3, nif_fdb_future_get_string_array},
     {"fdb_future_get_value", 1, nif_fdb_future_get_value},
-    {"fdb_future_get_version", 2, nif_fdb_future_get_version},
-    {"fdb_future_is_error", 1, nif_fdb_future_is_error},
+    {"fdb_future_get_version", 1, nif_fdb_future_get_version},
     {"fdb_future_is_ready", 1, nif_fdb_future_is_ready},
     {"fdb_future_release_memory", 1, nif_fdb_future_release_memory},
     {"fdb_future_set_callback", 3, nif_fdb_future_set_callback},

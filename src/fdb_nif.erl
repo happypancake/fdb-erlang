@@ -90,14 +90,7 @@ fdb_future_get_string_array(_f, _out_strings, _out_count) ->
 fdb_future_get_value(_f) ->
   nif_not_loaded.
 
-fdb_future_get_version(_f, _out_version) ->
-  nif_not_loaded.
-
-fdb_future_is_error(_f) ->
-  nif_not_loaded.
-
-fdb_future_is_error_v22() -> 
-
+fdb_future_get_version(_f) ->
   nif_not_loaded.
 
 fdb_future_is_ready(_f) ->
