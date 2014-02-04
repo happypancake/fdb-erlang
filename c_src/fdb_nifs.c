@@ -202,9 +202,12 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     atom_machine_id = enif_make_atom(env, "machine_id");
     atom_datacenter_id = enif_make_atom(env, "datacenter_id");
     //FDBNetworkOption enum
-    atom_local_address = enif_make_atom(env, "atom_local_address");
-    atom_cluster_file = enif_make_atom(env, "atom_cluster_file");
+    atom_local_address = enif_make_atom(env, "local_address");
+    atom_cluster_file = enif_make_atom(env, "cluster_file");
     atom_trace_enable = enif_make_atom(env, "trace_enable");
+    //FDBConflictRangeType enum
+    atom_read = enif_make_atom(env, "read");
+    atom_write = enif_make_atom(env, "write");
 
     if (register_fdb_resources(env)!=0)
         return -1;
