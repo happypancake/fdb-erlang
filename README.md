@@ -8,7 +8,9 @@ This is still very early alpha.
 
 - ~~A non-VM-blocking `fdb_nif:fdb_future_block_until_ready` using `enif_send` and `fdb_future_set_callback`. More inspiration [here](http://www.erlang-factory.com/upload/presentations/370/paul-davis-zero-to-emonk.pdf).~~
 - ~~Conversion from Erlang terms to keys using [the FDB tuple layer](https://foundationdb.com/documentation/api-python.html#api-python-tuple-layer).~~
-- Map most-used functionality. (A lot of function calls return `not_implemented`.)
+- ~~Map most-used functionality. (A lot of function calls return `not_implemented`.)~~
+- Feature-complete tests.
+- Fix memory leaks in case of non-happy paths.
 
 ## Prerequisites
 
