@@ -76,7 +76,7 @@ void cleanup_network(ErlNifEnv* env, void* obj)
 void cleanup_cluster(ErlNifEnv* env, void* obj)
 {
     enif_cluster_t *ctx=(enif_cluster_t*)obj;
-    if (ctx == NULL) return;
+    if (ctx == NULL || ctx->lock == NULL) return;
     ErlNifMutex *lock = ctx->lock;
     enif_mutex_lock(lock);
     if (ctx->handle!=NULL)
@@ -84,6 +84,7 @@ void cleanup_cluster(ErlNifEnv* env, void* obj)
         fdb_cluster_destroy(ctx->handle);
         ctx->handle = NULL;
     }
+    ctx->lock = NULL;    
     enif_mutex_unlock(lock);
     enif_mutex_destroy(lock);
 }
