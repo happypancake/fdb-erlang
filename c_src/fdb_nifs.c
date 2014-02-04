@@ -37,6 +37,12 @@ static ERL_NIF_TERM atom_trace_enable;
 static ERL_NIF_TERM atom_read;
 static ERL_NIF_TERM atom_write;
 
+// FDBMutationType enum
+static ERL_NIF_TERM atom_add;
+static ERL_NIF_TERM atom_and;
+static ERL_NIF_TERM atom_or;
+static ERL_NIF_TERM atom_xor;
+
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
     ERL_NIF_TERM res;
@@ -141,6 +147,27 @@ static int get_FDBNetworkOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBNetworkOpt
     return 0;
 }
 
+static int get_FDBMutationType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBMutationType* mode) 
+{
+    if (enif_compare( atom, atom_add) == 0) {
+      (*mode) = FDB_MUTATION_TYPE_ADD; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_and) == 0) {
+      (*mode) = FDB_MUTATION_TYPE_AND; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_or) == 0) {
+      (*mode) = FDB_MUTATION_TYPE_OR; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_xor) == 0) {
+      (*mode) = FDB_MUTATION_TYPE_XOR; 
+      return 1;
+    }
+    return 0;
+}
+
 static int get_FDBConflictRangeType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBConflictRangeType* mode) 
 {
     if (enif_compare( atom, atom_read) == 0) {
@@ -208,6 +235,11 @@ static int nif_on_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info)
     //FDBConflictRangeType enum
     atom_read = enif_make_atom(env, "read");
     atom_write = enif_make_atom(env, "write");
+    //FDBMutationType enum
+    atom_add = enif_make_atom(env, "add");
+    atom_and = enif_make_atom(env, "and");
+    atom_or = enif_make_atom(env, "or");
+    atom_xor = enif_make_atom(env, "xor");
 
     if (register_fdb_resources(env)!=0)
         return -1;
@@ -663,16 +695,21 @@ static ERL_NIF_TERM nif_fdb_transaction_add_conflict_range(ErlNifEnv* env, int a
 
 static ERL_NIF_TERM nif_fdb_transaction_atomic_op(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=6) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary Key,Param;
+    FDBMutationType Type;
 
-    //  FDBTransaction* tr;
-    //  uint8_t const* key_name;
-    //  int key_name_length;
-    //  uint8_t const* param;
-    //  int param_length;
-    //  FDBMutationType operation_type;
+    if (  argc!=4
+       || get_transaction(env,argv[0],&Tx) == 0
+       || get_binary(env,argv[1],&Key) == 0
+       || get_binary(env,argv[2],&Param) == 0
+       || get_FDBMutationType(env, argv[3], &Type) == 0)  
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    fdb_transaction_atomic_op(Tx->handle,
+             Key.data, Key.size, Param.data, Param.size, Type);
+
+    return enif_make_int(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_cancel(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -1030,7 +1067,7 @@ static ErlNifFunc nifs[] =
     {"fdb_setup_network", 0, nif_fdb_setup_network},
     {"fdb_stop_network", 0, nif_fdb_stop_network},
     {"fdb_transaction_add_conflict_range", 4, nif_fdb_transaction_add_conflict_range},
-    {"fdb_transaction_atomic_op", 6, nif_fdb_transaction_atomic_op},
+    {"fdb_transaction_atomic_op", 4, nif_fdb_transaction_atomic_op},
     {"fdb_transaction_cancel", 1, nif_fdb_transaction_cancel},
     {"fdb_transaction_clear", 2, nif_fdb_transaction_clear},
     {"fdb_transaction_clear_range", 3, nif_fdb_transaction_clear_range},
