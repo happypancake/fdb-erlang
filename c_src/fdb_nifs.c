@@ -489,22 +489,14 @@ static ERL_NIF_TERM nif_fdb_future_is_ready(ErlNifEnv* env, int argc, const ERL_
 
 static ERL_NIF_TERM nif_fdb_future_release_memory(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=1) return enif_make_badarg(env);
+    enif_future_t *f; 
+    if (  argc!=1
+       || get_future(env,argv[0],&f) == 0) 
+       return enif_make_badarg(env);
 
-    //  FDBFuture* f;
+    fdb_future_release_memory(f->handle);
 
-    return error_not_implemented;
-}
-
-static ERL_NIF_TERM nif_fdb_future_set_callback(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{
-    if (argc!=3) return enif_make_badarg(env);
-
-    //  FDBFuture* f;
-    //  FDBCallback callback;
-    //  void* callback_parameter;
-
-    return error_not_implemented;
+    return enif_make_int(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_get_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -942,7 +934,6 @@ static ErlNifFunc nifs[] =
     {"fdb_future_get_version", 1, nif_fdb_future_get_version},
     {"fdb_future_is_ready", 1, nif_fdb_future_is_ready},
     {"fdb_future_release_memory", 1, nif_fdb_future_release_memory},
-    {"fdb_future_set_callback", 3, nif_fdb_future_set_callback},
     {"fdb_get_error", 1, nif_fdb_get_error},
     {"fdb_network_set_option", 3, nif_fdb_network_set_option},
     {"fdb_run_network", 0, nif_fdb_run_network},

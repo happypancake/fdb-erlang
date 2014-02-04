@@ -99,12 +99,8 @@ fdb_future_is_ready(_f) ->
 fdb_future_release_memory(_f) ->
   nif_not_loaded.
 
-fdb_future_set_callback(_f, _callback, _callback_parameter) ->
-  nif_not_loaded.
-
 fdb_get_error(_code) ->
   nif_not_loaded.
-
 
 fdb_network_set_option(_option, _value, _value_length) ->
   nif_not_loaded.
