@@ -84,7 +84,7 @@ fdb_future_get_key(_f) ->
 fdb_future_get_keyvalue_array(_f) ->
   nif_not_loaded.
 
-fdb_future_get_string_array(_f, _out_strings, _out_count) ->
+fdb_future_get_string_array(_f) ->
   nif_not_loaded.
 
 fdb_future_get_value(_f) ->

@@ -397,32 +397,49 @@ static ERL_NIF_TERM nif_fdb_future_get_keyvalue_array(ErlNifEnv* env, int argc, 
     {
         return mk_result(env,err,atom_undefined);
     }
-    else
-    {
-        ERL_NIF_TERM result = enif_make_list(env, 0);
 
-        while (out_count>0)
-        {
-	   out_count = out_count - 1;
-           const FDBKeyValue *kv = &(out_kv[out_count]);
-           ERL_NIF_TERM k = make_binary(env, kv->key, kv->key_length);
-           ERL_NIF_TERM v = make_binary(env, kv->value, kv->value_length);
-           ERL_NIF_TERM elem = enif_make_tuple2(env, k, v);
-           result = enif_make_list_cell(env, elem, result);
-        }
-        return mk_result(env,err,result);
+    ERL_NIF_TERM result = enif_make_list(env, 0);
+
+    while (out_count>0)
+    {
+      out_count = out_count - 1;
+      const FDBKeyValue *kv = &(out_kv[out_count]);
+      ERL_NIF_TERM k = make_binary(env, kv->key, kv->key_length);
+      ERL_NIF_TERM v = make_binary(env, kv->value, kv->value_length);
+      ERL_NIF_TERM elem = enif_make_tuple2(env, k, v);
+      result = enif_make_list_cell(env, elem, result);
     }
+    return mk_result(env,err,result);
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_string_array(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=3) return enif_make_badarg(env);
+    enif_future_t *Future;
+    const char **out_strings;
+    int out_count;
+    fdb_error_t err;
 
-    // FDBFuture* f;
-    //  const char*** out_strings;
-    //  int* out_count)
+    if (  argc != 1
+       || get_future(env, argv[0], &Future) == 0)
+      return enif_make_badarg(env);
+    
+    err = fdb_future_get_string_array(Future->handle, &out_strings, &out_count);
 
-    return error_not_implemented;
+    if (err!=0)
+    {
+      return mk_result(env,err,atom_undefined);
+    }
+
+    ERL_NIF_TERM result = enif_make_list(env, 0);
+
+    while (out_count>0)
+    {
+      out_count = out_count - 1;
+      const char * n = out_strings[out_count];
+      ERL_NIF_TERM elem = make_binary(env, (const uint8_t *)n, strlen(n));
+      result = enif_make_list_cell(env, elem, result);
+    }
+    return mk_result(env,err,result);
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_value(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -938,7 +955,7 @@ static ErlNifFunc nifs[] =
     {"fdb_future_get_error", 1, nif_fdb_future_get_error},
     {"fdb_future_get_key", 1, nif_fdb_future_get_key},
     {"fdb_future_get_keyvalue_array", 1, nif_fdb_future_get_keyvalue_array},
-    {"fdb_future_get_string_array", 3, nif_fdb_future_get_string_array},
+    {"fdb_future_get_string_array", 1, nif_fdb_future_get_string_array},
     {"fdb_future_get_value", 1, nif_fdb_future_get_value},
     {"fdb_future_get_version", 1, nif_fdb_future_get_version},
     {"fdb_future_is_ready", 1, nif_fdb_future_is_ready},
