@@ -134,7 +134,7 @@ static int get_FDBNetworkOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBNetworkOpt
 
 static int get_FDBMutationType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBMutationType* mode) 
 {
-    CMP_ATOM(atom,FDB_MUTATION_TYPE_ADD); 
+    CMP_ATOM(atom_add,FDB_MUTATION_TYPE_ADD); 
     CMP_ATOM(atom_and,FDB_MUTATION_TYPE_AND); 
     CMP_ATOM(atom_or,FDB_MUTATION_TYPE_OR); 
     CMP_ATOM(atom_xor,FDB_MUTATION_TYPE_XOR); 
