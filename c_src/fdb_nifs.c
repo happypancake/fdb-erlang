@@ -875,13 +875,16 @@ static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int arg
 
 static ERL_NIF_TERM nif_fdb_transaction_watch(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=3) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary Key;
+    if (  argc!=2
+       || get_transaction(env,argv[0], &Tx) == 0
+       || get_binary(env,argv[1],&Key) == 0)
+      return enif_make_badarg(env);
 
-    //  FDBTransaction *tr;
-    //  uint8_t const* key_name;
-    //  int key_name_length)
+    fdb_transaction_watch(Tx->handle,Key.data, Key.size);
 
-    return error_not_implemented;
+    return enif_make_int(env, 0);
 }
 
 static ERL_NIF_TERM nif_new_cluster(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -977,7 +980,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_get", 2, nif_fdb_transaction_get},
     {"fdb_transaction_get_addresses_for_key", 2, nif_fdb_transaction_get_addresses_for_key},
     {"fdb_transaction_get_committed_version", 2, nif_fdb_transaction_get_committed_version},
-    {"fdb_transaction_get_key", 6, nif_fdb_transaction_get_key},
+    {"fdb_transaction_get_key", 5, nif_fdb_transaction_get_key},
     {"fdb_transaction_get_range", 13, nif_fdb_transaction_get_range},
     {"fdb_transaction_get_read_version", 1, nif_fdb_transaction_get_read_version},
     {"fdb_transaction_on_error", 2, nif_fdb_transaction_on_error},
@@ -985,7 +988,7 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_set", 3, nif_fdb_transaction_set},
     {"fdb_transaction_set_option", 4, nif_fdb_transaction_set_option},
     {"fdb_transaction_set_read_version", 2, nif_fdb_transaction_set_read_version},
-    {"fdb_transaction_watch", 3, nif_fdb_transaction_watch},
+    {"fdb_transaction_watch", 2, nif_fdb_transaction_watch},
     {"new_cluster", 0, nif_new_cluster},
     {"new_database", 0, nif_new_database},
     {"new_transaction", 0, nif_new_transaction},
