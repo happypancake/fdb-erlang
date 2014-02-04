@@ -138,9 +138,6 @@ fdb_transaction_get_key(_tr, _key, _or_equal, _offset, _snapshot) ->
 fdb_transaction_get_range(_tr, _begin_key_name, _begin_or_equal, _begin_offset, _end_key_name, _end_or_equal, _end_offset, _limit, _target_bytes, _mode, _iteration, _snapshot, _reverse) ->
   nif_not_loaded.
 
-fdb_transaction_get_range_selector(_tr, _begin_key_name, _begin_key_name_length, _begin_or_equal, _begin_offset, _end_key_name, _end_key_name_length, _end_or_equal, _end_offset, _limit) ->
-  nif_not_loaded.
-
 fdb_transaction_get_read_version(_tr) ->
   nif_not_loaded.
 

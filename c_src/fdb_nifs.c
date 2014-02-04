@@ -789,24 +789,6 @@ static ERL_NIF_TERM nif_fdb_transaction_get_range(ErlNifEnv* env, int argc, cons
     return mk_and_release_resource(env,Future);
 }
 
-static ERL_NIF_TERM nif_fdb_transaction_get_range_selector(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
-{
-    if (argc!=10) return mk_error(env,"expected_10_parameters");
-
-    //  FDBTransaction* tr;
-    //  uint8_t const* begin_key_name;
-    //  int begin_key_name_length;
-    //  fdb_bool_t begin_or_equal;
-    //  int begin_offset;
-    //  uint8_t const* end_key_name;
-    //  int end_key_name_length;
-    //  fdb_bool_t end_or_equal;
-    //  int end_offset;
-    //  int limit;
-
-    return error_not_implemented;
-}
-
 static ERL_NIF_TERM nif_fdb_transaction_get_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     enif_transaction_t *Tx;
@@ -997,7 +979,6 @@ static ErlNifFunc nifs[] =
     {"fdb_transaction_get_committed_version", 2, nif_fdb_transaction_get_committed_version},
     {"fdb_transaction_get_key", 6, nif_fdb_transaction_get_key},
     {"fdb_transaction_get_range", 13, nif_fdb_transaction_get_range},
-    {"fdb_transaction_get_range_selector", 10, nif_fdb_transaction_get_range_selector},
     {"fdb_transaction_get_read_version", 1, nif_fdb_transaction_get_read_version},
     {"fdb_transaction_on_error", 2, nif_fdb_transaction_on_error},
     {"fdb_transaction_reset", 1, nif_fdb_transaction_reset},
