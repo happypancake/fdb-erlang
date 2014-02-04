@@ -33,6 +33,10 @@ static ERL_NIF_TERM atom_local_address;
 static ERL_NIF_TERM atom_cluster_file;
 static ERL_NIF_TERM atom_trace_enable;
 
+//FDBConflictRangeType enum
+static ERL_NIF_TERM atom_read;
+static ERL_NIF_TERM atom_write;
+
 static ERL_NIF_TERM mk_and_release_resource(ErlNifEnv* env,void *resptr)
 {
     ERL_NIF_TERM res;
@@ -132,6 +136,19 @@ static int get_FDBNetworkOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBNetworkOpt
     }
     if (enif_compare( atom, atom_trace_enable) == 0) {
       (*mode) = FDB_NET_OPTION_TRACE_ENABLE; 
+      return 1;
+    }
+    return 0;
+}
+
+static int get_FDBConflictRangeType(ErlNifEnv* env, ERL_NIF_TERM atom, FDBConflictRangeType* mode) 
+{
+    if (enif_compare( atom, atom_read) == 0) {
+      (*mode) = FDB_CONFLICT_RANGE_TYPE_READ; 
+      return 1;
+    }
+    if (enif_compare( atom, atom_write) == 0) {
+      (*mode) = FDB_CONFLICT_RANGE_TYPE_WRITE; 
       return 1;
     }
     return 0;
@@ -621,16 +638,24 @@ static ERL_NIF_TERM nif_fdb_stop_network(ErlNifEnv* env, int argc, const ERL_NIF
 
 static ERL_NIF_TERM nif_fdb_transaction_add_conflict_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
-    if (argc!=6) return enif_make_badarg(env);
+    enif_transaction_t *Tx;
+    ErlNifBinary BeginKey,EndKey;
+    FDBConflictRangeType Type;
+    fdb_error_t err;
 
-    // FDBTransaction *tr;
-    //  uint8_t const* begin_key_name;
-    //  int begin_key_name_length;
-    //  uint8_t const* end_key_name;
-    //  int end_key_name_length;
-    //  FDBConflictRangeType type)
+    if (  argc!=4
+       || get_transaction(env,argv[0],&Tx) == 0
+       || get_binary(env,argv[1],&BeginKey) == 0
+       || get_binary(env,argv[2],&EndKey) == 0
+       || get_FDBConflictRangeType(env, argv[3], &Type) == 0)  
+      return enif_make_badarg(env);
 
-    return error_not_implemented;
+    err = fdb_transaction_add_conflict_range(Tx->handle,
+             BeginKey.data, BeginKey.size,
+             EndKey.data, EndKey.size,
+             Type);
+
+    return enif_make_int(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_atomic_op(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -1001,7 +1026,7 @@ static ErlNifFunc nifs[] =
     {"fdb_select_api_version", 1, nif_fdb_select_api_version},
     {"fdb_setup_network", 0, nif_fdb_setup_network},
     {"fdb_stop_network", 0, nif_fdb_stop_network},
-    {"fdb_transaction_add_conflict_range", 6, nif_fdb_transaction_add_conflict_range},
+    {"fdb_transaction_add_conflict_range", 4, nif_fdb_transaction_add_conflict_range},
     {"fdb_transaction_atomic_op", 6, nif_fdb_transaction_atomic_op},
     {"fdb_transaction_cancel", 1, nif_fdb_transaction_cancel},
     {"fdb_transaction_clear", 2, nif_fdb_transaction_clear},

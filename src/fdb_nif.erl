@@ -105,7 +105,7 @@ fdb_network_set_option(_option, _value) ->
 fdb_select_api_version(_runtime_version) ->
   nif_not_loaded.
 
-fdb_transaction_add_conflict_range(_tr, _begin_key_name, _begin_key_name_length, _end_key_name, _end_key_name_length) ->
+fdb_transaction_add_conflict_range(_tr, _begin_key, _end_key, _type ) ->
   nif_not_loaded.
 
 fdb_transaction_atomic_op(_tr, _key_name, _key_name_length, _param, _param_length, _operation_type) ->
