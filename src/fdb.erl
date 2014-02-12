@@ -7,19 +7,12 @@
 -export([bind/2, next/1]).
 -export([init_and_open/0, init_and_open/1]).
 
+-behaviour(gen_fdb).
+
 -define (FDB_API_VERSION, 21).
 
 -define (FUTURE_TIMEOUT, 5000).
 -include("../include/fdb.hrl").
-
--type fdb_version() :: pos_integer().
--type fdb_errorcode() :: pos_integer().
--type fdb_cmd_result() :: ok | {error, fdb_errorcode()}.
-%-type fdb_qry_result() :: {ok, term()} | {error, fdb_errorcode()}.
--type fdb_database() :: {db, term()}.
--type fdb_transaction() :: {tx, term()}.
--type fdb_handle() :: fdb_database() | fdb_transaction().
--type fdb_key() :: binary().
 
 %% @doc Loads the native FoundationDB library file from a certain location
 -spec init(SoFile::list())-> ok | {error, term()}.
@@ -184,6 +177,7 @@ clear_range({tx, Tx}, Begin, End) ->
   ErrCode = fdb_nif:fdb_transaction_clear_range(Tx, tuple:pack(Begin), tuple:pack(End)),
   handle_fdb_result(ErrCode).
 
+-spec transact(fdb_database(), fun((fdb_transaction())->term())) -> term().
 transact({db, DbHandle}, DoStuff) ->
   CommitResult = attempt_transaction(DbHandle, DoStuff),
   handle_transaction_attempt(CommitResult).

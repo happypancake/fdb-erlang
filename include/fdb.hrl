@@ -18,3 +18,14 @@
    data = [],
    select,
    out_more = true}).
+
+-type fdb_version() :: pos_integer().
+-type fdb_errorcode() :: pos_integer().
+-type fdb_cmd_result() :: ok | {error, fdb_errorcode()}.
+%-type fdb_qry_result() :: {ok, term()} | {error, fdb_errorcode()}.
+-type fdb_database() :: {db, term()}.
+-type fdb_transaction() :: {tx, term()}.
+-type fdb_handle() :: fdb_database() | fdb_transaction().
+-type fdb_key() :: binary().
+
+
