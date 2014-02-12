@@ -7,7 +7,7 @@
 -export([bind/2, next/1]).
 -export([init_and_open/0, init_and_open/1]).
 
--behaviour(gen_fdb).
+%-behaviour(gen_fdb).
 
 -define (FDB_API_VERSION, 21).
 
@@ -78,12 +78,13 @@ get(DB={db, _}, Select = #select{}) ->
   transact(DB, fun(Tx) -> get(Tx, Select) end);
 get(Tx={tx, _}, Select = #select{}) ->
   Iterator = bind(Tx, Select),
-  iterate_all(Iterator);
+  Next = next(Iterator),
+  Next#iterator.data;
 get(FdbHandle, Key) -> 
   get(FdbHandle, Key, not_found).
 
 %% @doc Gets a range of key_values where `begin <= X < end`
--spec get_range(fdb_handle(), fdb_key(),fdb_key()) -> ([term()]).
+-spec get_range(fdb_handle(), fdb_key(),fdb_key()) -> ([term()]|{error,nif_not_loaded}).
 %% @end
 get_range(Handle, Begin, End) ->
   get(Handle, #select{gte = Begin, lt = End}).
@@ -110,10 +111,8 @@ bind({tx, Transaction}, Select = #select{}) ->
   #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
 %% @doc Get data of an iterator; returns the iterator or `done` when finished
--spec next(#iterator{}) -> (#iterator{} | done).
+-spec next(#iterator{}) -> (#iterator{}).
 %% @end
-next(#iterator{out_more=false}) -> 
-  done;
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
   {LstKey, LstIsEq, LstOfs} = lst_lt(Select#select.lt, Select#select.lte),
@@ -128,18 +127,7 @@ next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Sele
     Select#select.is_reverse),
   {ok, EncodedData} = future_get(F, keyvalue_array),
   Data = lists:map(fun({X, Y})-> {tuple:unpack(X), binary_to_term(Y)} end, EncodedData),
-  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = Data /= []}.
-
-iterate_all(Iterator) ->
-  iterate_all(next(Iterator), []).
-iterate_all(done, Result) -> Result;
-iterate_all(#iterator{data = Data, select = Select}, []) 
-  when Select#select.limit == 0 andalso Select#select.target_bytes == 0
-  -> Data;
-iterate_all(Iterator, Result) ->
-  NewResult = Result++Iterator#iterator.data,
-  Next = next(Iterator),
-  iterate_all(Next, NewResult). 
+  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = false}.
 
 fst_gt(nil, nil) -> {<<0>>, true, 0};
 fst_gt(nil, Value) -> { tuple:pack(Value), true, 0  };
@@ -183,17 +171,21 @@ transact({db, DbHandle}, DoStuff) ->
   handle_transaction_attempt(CommitResult).
 
 attempt_transaction(DbHandle, DoStuff) ->
-  {0, Tx} = fdb_nif:fdb_database_create_transaction(DbHandle),
-  Result = DoStuff({tx, Tx}),
-  ApplySelf = fun() -> attempt_transaction(DbHandle, DoStuff) end,
-  CommitF = fdb_nif:fdb_transaction_commit(Tx), 
-  {future(CommitF), Tx, Result, ApplySelf}.
+  case fdb_nif:fdb_database_create_transaction(DbHandle) of
+    {0, Tx} ->
+      Result = DoStuff({tx, Tx}),
+      ApplySelf = fun() -> attempt_transaction(DbHandle, DoStuff) end,
+      CommitF = fdb_nif:fdb_transaction_commit(Tx), 
+      {future(CommitF), Tx, Result, ApplySelf};
+    Error -> Error
+  end.
 
 handle_transaction_attempt({ok, _Tx, Result, _ApplySelf}) -> Result;
 handle_transaction_attempt({{error, Err}, Tx, _Result, ApplySelf}) ->
   OnErrorF = fdb_nif:fdb_transaction_on_error(Tx, Err),
   RetryAllowed = future(OnErrorF),
-  maybe_reattempt_transaction(RetryAllowed, ApplySelf).
+  maybe_reattempt_transaction(RetryAllowed, ApplySelf);
+handle_transaction_attempt(nif_not_loaded) -> {error, nif_not_loaded}.
 
 maybe_reattempt_transaction(ok, ApplySelf) ->  ApplySelf();
 maybe_reattempt_transaction(Error, _ApplySelf) -> Error.
