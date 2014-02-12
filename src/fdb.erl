@@ -14,10 +14,6 @@
 -define (FUTURE_TIMEOUT, 5000).
 -include("../include/fdb.hrl").
 
-maybe_fdb_do(Value, Fs) ->
-  Wrapped = lists:map(fun wrap_fdb_result_fun/1, Fs),
-  maybe:do(Value, Wrapped).
-
 maybe_fdb_do(Fs) ->
   Wrapped = lists:map(fun wrap_fdb_result_fun/1, Fs),
   maybe:do(Wrapped).
@@ -72,8 +68,10 @@ open() ->
 init_and_open() ->
   init(),
   api_version(100),
-  {ok, DB} = open(),
-  DB.
+  maybe_fdb_do([
+    fun() -> open() end,
+    fun(DB) -> DB end
+  ]).
 
 %% @doc Initializes the driver and returns a database handle
 -spec init_and_open(SoFile::list()) -> fdb_database().
@@ -81,8 +79,10 @@ init_and_open() ->
 init_and_open(SoFile) ->
   init(SoFile),
   api_version(100),
-  {ok, DB} = open(),
-  DB.
+  maybe_fdb_do([
+    fun() -> open() end,
+    fun(DB) -> DB end
+  ]).
 
 %% @doc Gets a value using a key or multiple values using a selector
 %%
@@ -110,12 +110,14 @@ get_range(Handle, Begin, End) ->
 get(DB={db, _Database}, Key, DefaultValue) ->
   transact(DB, fun(Tx) -> get(Tx, Key, DefaultValue) end);
 get({tx, Tx}, Key, DefaultValue) ->
-  GetF = fdb_nif:fdb_transaction_get(Tx, tuple:pack(Key)),
-  {ok, Result} = future_get(GetF, value),
-  case Result of
-    not_found -> DefaultValue;
-    _ -> binary_to_term(Result)
-  end.
+  maybe_fdb_do([
+  fun()-> fdb_nif:fdb_transaction_get(Tx, tuple:pack(Key)) end,
+  fun(GetF) -> future_get(GetF, value) end,
+  fun(Result) -> case Result of
+      not_found -> DefaultValue;
+      _ -> binary_to_term(Result)
+   end
+  end]).
 
 %% @doc Binds a range of data to an iterator; use `fdb:next` to iterate it
 -spec bind(fdb_handle(), #select{}) -> #iterator{}.
@@ -131,18 +133,27 @@ bind({tx, Transaction}, Select = #select{}) ->
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
   {LstKey, LstIsEq, LstOfs} = lst_lt(Select#select.lt, Select#select.lte),
-  F = fdb_nif:fdb_transaction_get_range(Transaction, 
-    FstKey, FstIsEq, Select#select.offset_begin + FstOfs,
-    <<LstKey/binary>>, LstIsEq, Select#select.offset_end + LstOfs,
-    Select#select.limit, 
-    Select#select.target_bytes, 
-    Select#select.streaming_mode, 
-    Iteration, 
-    Select#select.is_snapshot, 
-    Select#select.is_reverse),
-  {ok, EncodedData} = future_get(F, keyvalue_array),
-  Data = lists:map(fun({X, Y})-> {tuple:unpack(X), binary_to_term(Y)} end, EncodedData),
-  Iterator#iterator{ data = Data, iteration = Iteration + 1, out_more = false}.
+  maybe_fdb_do([
+   fun() -> fdb_nif:fdb_transaction_get_range(Transaction, 
+      FstKey, FstIsEq, Select#select.offset_begin + FstOfs,
+      <<LstKey/binary>>, LstIsEq, Select#select.offset_end + LstOfs,
+      Select#select.limit, 
+      Select#select.target_bytes, 
+      Select#select.streaming_mode, 
+      Iteration, 
+      Select#select.is_snapshot, 
+      Select#select.is_reverse) end,
+   fun(F) -> wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)) end,
+   fun(F) -> future_get(F, keyvalue_array) end,
+   fun(EncodedData) -> 
+     Iterator#iterator{ 
+        data = lists:map(fun unpack_array_row/1, EncodedData),
+        iteration = Iteration + 1, 
+        out_more = false}
+    end]).
+
+unpack_array_row({X,Y}) -> 
+  {tuple:unpack(X), binary_to_term(Y)}.
 
 fst_gt(nil, nil) -> {<<0>>, true, 0};
 fst_gt(nil, Value) -> { tuple:pack(Value), true, 0  };
@@ -186,26 +197,24 @@ transact({db, DbHandle}, DoStuff) ->
   handle_transaction_attempt(CommitResult).
 
 attempt_transaction(DbHandle, DoStuff) ->
-  case fdb_nif:fdb_database_create_transaction(DbHandle) of
-    {0, Tx} ->
+  maybe_fdb_do([
+  fun() -> fdb_nif:fdb_database_create_transaction(DbHandle) end,
+  fun(Tx) -> 
       Result = DoStuff({tx, Tx}),
       ApplySelf = fun() -> attempt_transaction(DbHandle, DoStuff) end,
       CommitF = fdb_nif:fdb_transaction_commit(Tx), 
-      {future(CommitF), Tx, Result, ApplySelf};
-    Error -> Error
-  end.
+      {future(CommitF), Tx, Result, ApplySelf}
+     end
+  ]).
 
 handle_transaction_attempt({ok, _Tx, Result, _ApplySelf}) -> Result;
 handle_transaction_attempt({{error, Err}, Tx, _Result, ApplySelf}) ->
   OnErrorF = fdb_nif:fdb_transaction_on_error(Tx, Err),
-  RetryAllowed = future(OnErrorF),
-  maybe_reattempt_transaction(RetryAllowed, ApplySelf);
-handle_transaction_attempt(nif_not_loaded) -> {error, nif_not_loaded}.
+  maybe_fdb_do([
+    fun () -> future(OnErrorF) end,
+    fun () -> ApplySelf() end
+  ]).
 
-maybe_reattempt_transaction(ok, ApplySelf) ->  ApplySelf();
-maybe_reattempt_transaction(Error, _ApplySelf) -> Error.
-
-handle_fdb_result(nif_not_loaded) -> {error, nif_not_loaded};
 handle_fdb_result({0, RetVal}) -> {ok, RetVal};
 handle_fdb_result(0) -> ok;
 handle_fdb_result({error, network_already_running}) -> ok;
@@ -214,31 +223,29 @@ handle_fdb_result(Other) -> Other.
 future(F) -> future_get(F, none).
 
 future_get(F, FQuery) -> 
+  maybe_fdb_do([
+    fun() -> wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)) end,
+    fun() -> fdb_nif:fdb_future_get_error(F) end,
+    fun() -> get_future_property(F, FQuery) end
+  ]).
+
+get_future_property(_F,none) ->
+  ok;
+get_future_property(F,FQuery) ->
   FullQuery = list_to_atom("fdb_future_get_" ++ atom_to_list(FQuery)),
-  ok = wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)),
-  ErrCode = 0, %% no longer needed
-  check_future_error(ErrCode, F, FullQuery).
+  apply(fdb_nif, FullQuery, [F]).
 
 wait_non_blocking(nif_not_loaded, nif_not_loaded) ->
   {error, nif_not_loaded};
 wait_non_blocking(F, false) ->
   Ref = make_ref(),
-  0 = fdb_nif:send_on_complete(F,self(),Ref),
-  receive
-    Ref -> ok
-    after ?FUTURE_TIMEOUT -> timeout
-  end;
-wait_non_blocking(_F, true) ->
-  ok.
+  maybe_fdb_do([
+  fun ()-> fdb_nif:send_on_complete(F,self(),Ref),
+    receive
+      Ref -> {ok, F}
+      after ?FUTURE_TIMEOUT -> {error, timeout}
+    end
+  end]);
+wait_non_blocking(F, true) ->
+  {ok, F}.
 
-check_future_error(0, F, FQuery) ->
-  ErrCode = fdb_nif:fdb_future_get_error(F),
-  maybe_get_future_value(ErrCode, F, FQuery);
-check_future_error(ErrCode, _F, _FQuery) -> handle_fdb_result(ErrCode).
-
-maybe_get_future_value(0, _F, fdb_future_get_none) ->
-  ok;
-maybe_get_future_value(0, F, FQuery) ->
-  handle_fdb_result(apply(fdb_nif, FQuery, [F]));
-maybe_get_future_value(ErrCode, _F, _FQuery) -> 
-  handle_fdb_result(ErrCode).
