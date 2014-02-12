@@ -190,6 +190,7 @@ handle_transaction_attempt(nif_not_loaded) -> {error, nif_not_loaded}.
 maybe_reattempt_transaction(ok, ApplySelf) ->  ApplySelf();
 maybe_reattempt_transaction(Error, _ApplySelf) -> Error.
 
+handle_fdb_result(nif_not_loaded) -> {error, nif_not_loaded};
 handle_fdb_result({0, RetVal}) -> {ok, RetVal};
 handle_fdb_result({FdbErrorcode, _RetVal}) -> {error, FdbErrorcode};
 handle_fdb_result(0) -> ok;
@@ -203,6 +204,8 @@ future_get(F, FQuery) ->
   ErrCode = 0, %% no longer needed
   check_future_error(ErrCode, F, FullQuery).
 
+wait_non_blocking(nif_not_loaded, nif_not_loaded) ->
+  {error, nif_not_loaded};
 wait_non_blocking(F, false) ->
   Ref = make_ref(),
   0 = fdb_nif:send_on_complete(F,self(),Ref),
