@@ -14,6 +14,21 @@
 -define (FUTURE_TIMEOUT, 5000).
 -include("../include/fdb.hrl").
 
+maybe_fdb_do(Value, Fs) ->
+  Wrapped = lists:map(fun wrap_fdb_result_fun/1, Fs),
+  maybe:do(Value, Wrapped).
+
+maybe_fdb_do(Fs) ->
+  Wrapped = lists:map(fun wrap_fdb_result_fun/1, Fs),
+  maybe:do(Wrapped).
+
+wrap_fdb_result_fun(F) ->
+  case erlang:fun_info(F, arity) of
+   {arity, 0} -> fun( ) -> handle_fdb_result(F()) end;
+   {arity, 1} -> fun(X) -> handle_fdb_result(F(X)) end;
+   _ -> throw({error, unsupported_arity })
+  end.
+
 %% @doc Loads the native FoundationDB library file from a certain location
 -spec init(SoFile::list())-> ok | {error, term()}.
 %% @end
@@ -42,14 +57,14 @@ api_version(Version) ->
 -spec open() -> fdb_database().
 %% @end
 open() ->
-  fdb_nif:fdb_setup_network(),
-  fdb_nif:fdb_run_network(),
-  ClusterF = fdb_nif:fdb_create_cluster(),
-  {ok, ClusterHandle} =  future_get(ClusterF, cluster),
-  DatabaseF =  fdb_nif:fdb_cluster_create_database(ClusterHandle),
-  DBR = future_get(DatabaseF, database),
-  {ok, DbHandle} = DBR, 
-  {ok,{db, DbHandle}}.
+  maybe_fdb_do([
+  fun () -> fdb_nif:fdb_setup_network() end,
+  fun () -> fdb_nif:fdb_run_network() end,
+  fun () -> fdb_nif:fdb_create_cluster() end,
+  fun (ClF) -> future_get(ClF, cluster) end,
+  fun (ClHandle) -> fdb_nif:fdb_cluster_create_database(ClHandle) end,
+  fun (DatabaseF) -> future_get(DatabaseF, database) end,
+  fun (DbHandle) -> {ok,{db, DbHandle}} end]).
 
 %% @doc Initializes the driver and returns a database handle
 -spec init_and_open() -> fdb_database().
@@ -192,9 +207,9 @@ maybe_reattempt_transaction(Error, _ApplySelf) -> Error.
 
 handle_fdb_result(nif_not_loaded) -> {error, nif_not_loaded};
 handle_fdb_result({0, RetVal}) -> {ok, RetVal};
-handle_fdb_result({FdbErrorcode, _RetVal}) -> {error, FdbErrorcode};
 handle_fdb_result(0) -> ok;
-handle_fdb_result(FdbErrorcode) -> {error, FdbErrorcode}.
+handle_fdb_result({error, network_already_running}) -> ok;
+handle_fdb_result(Other) -> Other.
 
 future(F) -> future_get(F, none).
 

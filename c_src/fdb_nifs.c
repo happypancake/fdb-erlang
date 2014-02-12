@@ -172,7 +172,6 @@ static int get_FDBTransactionOption(ErlNifEnv* env, ERL_NIF_TERM atom, FDBTransa
 
 static ERL_NIF_TERM make_binary(ErlNifEnv *env, const uint8_t *data, int size)
 {
-
         ERL_NIF_TERM result;
         uint8_t *chars = enif_make_new_binary(env,size,&result);
         memcpy(chars,data,size);
