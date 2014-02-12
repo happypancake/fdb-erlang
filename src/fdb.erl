@@ -6,6 +6,7 @@
 -export([transact/2]).
 -export([bind/2, next/1]).
 -export([init_and_open/0, init_and_open/1]).
+-export([maybe_fdb_do/1]).
 
 %-behaviour(gen_fdb).
 
@@ -235,8 +236,6 @@ get_future_property(F,FQuery) ->
   FullQuery = list_to_atom("fdb_future_get_" ++ atom_to_list(FQuery)),
   apply(fdb_nif, FullQuery, [F]).
 
-wait_non_blocking(nif_not_loaded, nif_not_loaded) ->
-  {error, nif_not_loaded};
 wait_non_blocking(F, false) ->
   Ref = make_ref(),
   maybe_fdb_do([
@@ -247,5 +246,7 @@ wait_non_blocking(F, false) ->
     end
   end]);
 wait_non_blocking(F, true) ->
-  {ok, F}.
+  {ok, F};
+wait_non_blocking(_, Error) ->
+  Error.
 
