@@ -6,7 +6,7 @@
 -export([transact/2]).
 -export([bind/2, next/1]).
 -export([init_and_open/0, init_and_open/1]).
--export([maybe_fdb_do/1]).
+-export([maybe_do/1]).
 
 %-behaviour(gen_fdb).
 
@@ -15,7 +15,7 @@
 -define (FUTURE_TIMEOUT, 5000).
 -include("../include/fdb.hrl").
 
-maybe_fdb_do(Fs) ->
+maybe_do(Fs) ->
   Wrapped = lists:map(fun wrap_fdb_result_fun/1, Fs),
   maybe:do(Wrapped).
 
@@ -54,7 +54,7 @@ api_version(Version) ->
 -spec open() -> fdb_database().
 %% @end
 open() ->
-  maybe_fdb_do([
+  maybe_do([
   fun () -> fdb_nif:fdb_setup_network() end,
   fun () -> fdb_nif:fdb_run_network() end,
   fun () -> fdb_nif:fdb_create_cluster() end,
@@ -69,7 +69,7 @@ open() ->
 init_and_open() ->
   init(),
   api_version(100),
-  maybe_fdb_do([
+  maybe_do([
     fun() -> open() end,
     fun(DB) -> DB end
   ]).
@@ -80,7 +80,7 @@ init_and_open() ->
 init_and_open(SoFile) ->
   init(SoFile),
   api_version(100),
-  maybe_fdb_do([
+  maybe_do([
     fun() -> open() end,
     fun(DB) -> DB end
   ]).
@@ -111,7 +111,7 @@ get_range(Handle, Begin, End) ->
 get(DB={db, _Database}, Key, DefaultValue) ->
   transact(DB, fun(Tx) -> get(Tx, Key, DefaultValue) end);
 get({tx, Tx}, Key, DefaultValue) ->
-  maybe_fdb_do([
+  maybe_do([
   fun()-> fdb_nif:fdb_transaction_get(Tx, tuple:pack(Key)) end,
   fun(GetF) -> future_get(GetF, value) end,
   fun(Result) -> case Result of
@@ -134,7 +134,7 @@ bind({tx, Transaction}, Select = #select{}) ->
 next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Select}) ->
   {FstKey, FstIsEq, FstOfs} = fst_gt(Select#select.gt, Select#select.gte),
   {LstKey, LstIsEq, LstOfs} = lst_lt(Select#select.lt, Select#select.lte),
-  maybe_fdb_do([
+  maybe_do([
    fun() -> fdb_nif:fdb_transaction_get_range(Transaction, 
       FstKey, FstIsEq, Select#select.offset_begin + FstOfs,
       <<LstKey/binary>>, LstIsEq, Select#select.offset_end + LstOfs,
@@ -144,7 +144,8 @@ next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Sele
       Iteration, 
       Select#select.is_snapshot, 
       Select#select.is_reverse) end,
-   fun(F) -> wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)) end,
+   fun(F) -> {fdb_nif:fdb_future_is_ready(F), F} end,
+   fun(Ready) -> wait_non_blocking(Ready) end,
    fun(F) -> future_get(F, keyvalue_array) end,
    fun(EncodedData) -> 
      Iterator#iterator{ 
@@ -198,7 +199,7 @@ transact({db, DbHandle}, DoStuff) ->
   handle_transaction_attempt(CommitResult).
 
 attempt_transaction(DbHandle, DoStuff) ->
-  maybe_fdb_do([
+  maybe_do([
   fun() -> fdb_nif:fdb_database_create_transaction(DbHandle) end,
   fun(Tx) -> 
       Result = DoStuff({tx, Tx}),
@@ -211,7 +212,7 @@ attempt_transaction(DbHandle, DoStuff) ->
 handle_transaction_attempt({ok, _Tx, Result, _ApplySelf}) -> Result;
 handle_transaction_attempt({{error, Err}, Tx, _Result, ApplySelf}) ->
   OnErrorF = fdb_nif:fdb_transaction_on_error(Tx, Err),
-  maybe_fdb_do([
+  maybe_do([
     fun () -> future(OnErrorF) end,
     fun () -> ApplySelf() end
   ]).
@@ -219,13 +220,15 @@ handle_transaction_attempt({{error, Err}, Tx, _Result, ApplySelf}) ->
 handle_fdb_result({0, RetVal}) -> {ok, RetVal};
 handle_fdb_result(0) -> ok;
 handle_fdb_result({error, network_already_running}) -> ok;
+handle_fdb_result({Err = {error, _},_Future}) -> Err;
 handle_fdb_result(Other) -> Other.
 
 future(F) -> future_get(F, none).
 
 future_get(F, FQuery) -> 
-  maybe_fdb_do([
-    fun() -> wait_non_blocking(F, fdb_nif:fdb_future_is_ready(F)) end,
+  maybe_do([
+    fun() -> {fdb_nif:fdb_future_is_ready(F),F} end,
+    fun(Ready) -> wait_non_blocking(Ready) end,
     fun() -> fdb_nif:fdb_future_get_error(F) end,
     fun() -> get_future_property(F, FQuery) end
   ]).
@@ -236,17 +239,15 @@ get_future_property(F,FQuery) ->
   FullQuery = list_to_atom("fdb_future_get_" ++ atom_to_list(FQuery)),
   apply(fdb_nif, FullQuery, [F]).
 
-wait_non_blocking(F, false) ->
+wait_non_blocking({false,F}) ->
   Ref = make_ref(),
-  maybe_fdb_do([
-  fun ()-> fdb_nif:send_on_complete(F,self(),Ref),
-    receive
+  maybe_do([
+   fun ()-> fdb_nif:send_on_complete(F,self(),Ref) end,
+   fun () -> receive
       Ref -> {ok, F}
       after ?FUTURE_TIMEOUT -> {error, timeout}
     end
   end]);
-wait_non_blocking(F, true) ->
-  {ok, F};
-wait_non_blocking(_, Error) ->
-  Error.
+wait_non_blocking({true,F}) ->
+  {ok, F}.
 
