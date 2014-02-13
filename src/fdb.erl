@@ -144,8 +144,8 @@ next(Iterator = #iterator{tx = Transaction, iteration = Iteration, select = Sele
       Iteration, 
       Select#select.is_snapshot, 
       Select#select.is_reverse) end,
-   fun(F) -> {fdb_nif:fdb_future_is_ready(F), F} end,
-   fun(Ready) -> wait_non_blocking(Ready) end,
+   fun(F) -> {fdb_nif:fdb_future_is_ready(F),F} end,
+   fun(Ready) -> wait_non_blocking(Ready) end, 
    fun(F) -> future_get(F, keyvalue_array) end,
    fun(EncodedData) -> 
      Iterator#iterator{ 
@@ -218,16 +218,16 @@ handle_transaction_attempt({{error, Err}, Tx, _Result, ApplySelf}) ->
   ]).
 
 handle_fdb_result({0, RetVal}) -> {ok, RetVal};
-handle_fdb_result(0) -> ok;
+handle_fdb_result({error, 2009}) -> ok;
 handle_fdb_result({error, network_already_running}) -> ok;
-handle_fdb_result({Err = {error, _},_Future}) -> Err;
+handle_fdb_result({Err = {error, _}, _F}) -> Err;
 handle_fdb_result(Other) -> Other.
 
 future(F) -> future_get(F, none).
 
 future_get(F, FQuery) -> 
   maybe_do([
-    fun() -> {fdb_nif:fdb_future_is_ready(F),F} end,
+    fun() -> {fdb_nif:fdb_future_is_ready(F), F} end,
     fun(Ready) -> wait_non_blocking(Ready) end,
     fun() -> fdb_nif:fdb_future_get_error(F) end,
     fun() -> get_future_property(F, FQuery) end
@@ -242,8 +242,8 @@ get_future_property(F,FQuery) ->
 wait_non_blocking({false,F}) ->
   Ref = make_ref(),
   maybe_do([
-   fun ()-> fdb_nif:send_on_complete(F,self(),Ref) end,
-   fun () -> receive
+  fun ()-> fdb_nif:send_on_complete(F,self(),Ref),
+    receive
       Ref -> {ok, F}
       after ?FUTURE_TIMEOUT -> {error, timeout}
     end

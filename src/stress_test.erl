@@ -19,9 +19,11 @@ get_results(Vals) ->
 
 test_get_and_set(ParentPid, DB, I) ->
   From = now(),
-  fdb:set(DB, I, I),
-  I = fdb:get(DB, I, I),
-  ParentPid ! {yups, From, now()}.
+  fdb:maybe_do([
+    fun() -> fdb:set(DB, I, I) end,
+    fun() -> fdb:get(DB, I, I) end,
+    fun() -> ParentPid ! {yups, From, now()} end
+  ]).
 
 report(L) ->
     Length = length(L),

@@ -80,6 +80,18 @@ static ERL_NIF_TERM mk_result(ErlNifEnv* env, fdb_error_t errcode, ERL_NIF_TERM 
     return enif_make_tuple2(env,enif_make_int(env,errcode),result);
 }
 
+static ERL_NIF_TERM mk_errorcode(ErlNifEnv* env, fdb_error_t errcode) 
+{
+    if (errcode == 0)
+    {
+      return atom_ok;
+    }
+    else
+    {
+      return enif_make_tuple2(env,atom_error,enif_make_int(env,errcode));
+    }
+}
+
 static fdb_bool_t get_boolean(ErlNifEnv* env, ERL_NIF_TERM atom, fdb_bool_t* val)
 {
     if (enif_compare( atom, atom_true) == 0)
@@ -293,7 +305,7 @@ static ERL_NIF_TERM nif_fdb_cluster_create_database(ErlNifEnv* env, int argc, co
 static ERL_NIF_TERM nif_fdb_cluster_destroy(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     // invoked by GC
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_cluster_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -305,7 +317,7 @@ static ERL_NIF_TERM nif_fdb_cluster_set_option(ErlNifEnv* env, int argc, const E
 //   // Parameter: Option takes no parameter
 //   FDB_CLUSTER_OPTION_DUMMY_DO_NOT_USE=-1
 //} FDBClusterOption;
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_create_cluster(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -350,7 +362,7 @@ static ERL_NIF_TERM nif_fdb_database_create_transaction(ErlNifEnv* env, int argc
 static ERL_NIF_TERM nif_fdb_database_destroy(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     // invoked by GC
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_database_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -367,7 +379,7 @@ static ERL_NIF_TERM nif_fdb_database_set_option(ErlNifEnv* env, int argc, const 
     fdb_error_t err = fdb_database_set_option(DB->handle, opt, value.data, value.size);
 
 
-    return enif_make_int(env, err);
+    return mk_errorcode(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_future_block_until_ready(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -377,7 +389,7 @@ static ERL_NIF_TERM nif_fdb_future_block_until_ready(ErlNifEnv* env, int argc, c
        || get_future(env,argv[0],&f) == 0)
       return enif_make_badarg(env);
 
-    return enif_make_int(env,fdb_future_block_until_ready(f->handle));
+    return mk_errorcode(env,fdb_future_block_until_ready(f->handle));
 }
 
 static ERL_NIF_TERM nif_fdb_future_cancel(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -389,13 +401,13 @@ static ERL_NIF_TERM nif_fdb_future_cancel(ErlNifEnv* env, int argc, const ERL_NI
     
     fdb_future_cancel(f->handle);
 
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_future_destroy(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     // invoked by GC
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_cluster(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -431,7 +443,7 @@ static ERL_NIF_TERM nif_fdb_future_get_error(ErlNifEnv* env, int argc, const ERL
        || get_future(env,argv[0],&Future) == 0) 
       return enif_make_badarg(env);
 
-    return enif_make_int(env,fdb_future_get_error(Future->handle));
+    return mk_errorcode(env,fdb_future_get_error(Future->handle));
 }
 
 static ERL_NIF_TERM nif_fdb_future_get_key(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -538,7 +550,7 @@ static ERL_NIF_TERM nif_fdb_future_get_value(ErlNifEnv* env, int argc, const ERL
 
     if (err != 0)
     {
-        return mk_result(env,err,atom_undefined);
+        return mk_errorcode(env,err);
     }
     if (out_present == 0)
     {
@@ -594,7 +606,7 @@ static ERL_NIF_TERM nif_fdb_future_release_memory(ErlNifEnv* env, int argc, cons
 
     fdb_future_release_memory(f->handle);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_get_error(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -620,7 +632,7 @@ static ERL_NIF_TERM nif_fdb_network_set_option(ErlNifEnv* env, int argc, const E
 
     err = fdb_network_set_option(option, Key.data, Key.size);
 
-    return enif_make_int(env, err);
+    return mk_errorcode(env, err);
 }
 
 static void* thr_event_loop(void* obj)
@@ -653,25 +665,25 @@ static ERL_NIF_TERM nif_fdb_select_api_version(ErlNifEnv* env, int argc, const E
        || enif_get_int(env,argv[0],&runtime_version)==0)
       return enif_make_badarg(env);
 
-    return enif_make_int(env,fdb_select_api_version(runtime_version));
+    return mk_errorcode(env,fdb_select_api_version(runtime_version));
 }
 
 static ERL_NIF_TERM nif_fdb_setup_network(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     if (argc!=0) return enif_make_badarg(env);
 
-    return enif_make_int(env,fdb_setup_network());
+    return mk_errorcode(env,fdb_setup_network());
 }
 
 static ERL_NIF_TERM nif_fdb_stop_network(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     if (argc!=0) return enif_make_badarg(env);
 
-    if (network->is_running==0) return enif_make_int(env,-1);
+    if (network->is_running==0) return mk_errorcode(env,-1);
 
     enif_release_resource(network);
 
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_add_conflict_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -693,7 +705,7 @@ static ERL_NIF_TERM nif_fdb_transaction_add_conflict_range(ErlNifEnv* env, int a
              EndKey.data, EndKey.size,
              Type);
 
-    return enif_make_int(env, err);
+    return mk_errorcode(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_atomic_op(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -712,7 +724,7 @@ static ERL_NIF_TERM nif_fdb_transaction_atomic_op(ErlNifEnv* env, int argc, cons
     fdb_transaction_atomic_op(Tx->handle,
              Key.data, Key.size, Param.data, Param.size, Type);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_cancel(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -725,7 +737,7 @@ static ERL_NIF_TERM nif_fdb_transaction_cancel(ErlNifEnv* env, int argc, const E
 
     fdb_transaction_cancel(Tx->handle);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -740,7 +752,7 @@ static ERL_NIF_TERM nif_fdb_transaction_clear(ErlNifEnv* env, int argc, const ER
 
     fdb_transaction_clear(Tx->handle,Key.data,Key.size);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_clear_range(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -756,7 +768,7 @@ static ERL_NIF_TERM nif_fdb_transaction_clear_range(ErlNifEnv* env, int argc, co
 
     fdb_transaction_clear_range(Tx->handle, Begin.data, Begin.size, End.data, End.size);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_commit(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -773,7 +785,7 @@ static ERL_NIF_TERM nif_fdb_transaction_commit(ErlNifEnv* env, int argc, const E
 static ERL_NIF_TERM nif_fdb_transaction_destroy(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     // invoked by GC
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_get(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -927,7 +939,7 @@ static ERL_NIF_TERM nif_fdb_transaction_reset(ErlNifEnv* env, int argc, const ER
 
     fdb_transaction_clear(Tx->handle,Key.data,Key.size);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_set(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -942,7 +954,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set(ErlNifEnv* env, int argc, const ERL_
 
     fdb_transaction_set(Tx->handle,Key.data, Key.size, Value.data, Value.size);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -960,7 +972,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, con
 
     err = fdb_transaction_set_option(Tx->handle,option, Value.data, Value.size);
     
-    return enif_make_int(env, err);
+    return mk_errorcode(env, err);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -975,7 +987,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int arg
 
     fdb_transaction_set_read_version(Tx->handle,version);
 
-    return enif_make_int(env,0);
+    return mk_errorcode(env,0);
 }
 
 static ERL_NIF_TERM nif_fdb_transaction_watch(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -989,7 +1001,7 @@ static ERL_NIF_TERM nif_fdb_transaction_watch(ErlNifEnv* env, int argc, const ER
 
     fdb_transaction_watch(Tx->handle,Key.data, Key.size);
 
-    return enif_make_int(env, 0);
+    return mk_errorcode(env, 0);
 }
 
 static ERL_NIF_TERM nif_new_cluster(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
@@ -1030,7 +1042,7 @@ static ERL_NIF_TERM send_on_complete(ErlNifEnv* env, int argc, const ERL_NIF_TER
     f->callback_msg = enif_make_copy(f->callback_env, argv[2]);
     enif_keep_resource(f);
     errcode = fdb_future_set_callback(f->handle, send_message_callback, f);
-    return enif_make_int(env,errcode);
+    return mk_errorcode(env,errcode);
 }
 
 void send_message_callback(FDBFuture* f,void* enifF)
