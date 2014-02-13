@@ -4,11 +4,10 @@
 -export([get/2, get/3, get_range/3, set/3]).
 -export([clear/2, clear_range/3]).
 -export([transact/2]).
--export([bind/2, next/1]).
 -export([init_and_open/0, init_and_open/1]).
 -export([maybe_do/1]).
 
-%-behaviour(gen_fdb).
+-behaviour(gen_fdb).
 
 -define (FDB_API_VERSION, 21).
 
@@ -112,7 +111,7 @@ get(DB={db, _Database}, Key, DefaultValue) ->
   transact(DB, fun(Tx) -> get(Tx, Key, DefaultValue) end);
 get({tx, Tx}, Key, DefaultValue) ->
   maybe_do([
-  fun()-> fdb_nif:fdb_transaction_get(Tx, tuple:pack(Key)) end,
+  fun()-> fdb_nif:fdb_transaction_get(Tx, pack(Key)) end,
   fun(GetF) -> future_get(GetF, value) end,
   fun(Result) -> case Result of
       not_found -> DefaultValue;
@@ -123,8 +122,8 @@ get({tx, Tx}, Key, DefaultValue) ->
 %% @doc Binds a range of data to an iterator; use `fdb:next` to iterate it
 -spec bind(fdb_handle(), #select{}) -> #iterator{}.
 %% @end
-bind({db, DB}, Select = #select{}) ->
-  transact({db,DB}, fun(Tx) -> bind({tx, Tx}, Select) end);
+bind(DB={db, _}, Select = #select{}) ->
+  transact(DB, fun(Tx) -> bind(Tx, Select) end);
 bind({tx, Transaction}, Select = #select{}) ->
   #iterator{tx = Transaction, select = Select, iteration = Select#select.iteration}.
 
@@ -158,12 +157,12 @@ unpack_array_row({X,Y}) ->
   {tuple:unpack(X), binary_to_term(Y)}.
 
 fst_gt(nil, nil) -> {<<0>>, true, 0};
-fst_gt(nil, Value) -> { tuple:pack(Value), true, 0  };
-fst_gt(Value, nil) -> { tuple:pack(Value), true, 1 }.
+fst_gt(nil, Value) -> { pack(Value), true, 0  };
+fst_gt(Value, nil) -> { pack(Value), true, 1 }.
 
 lst_lt(nil, nil) -> {<<255>>, false, 1};
-lst_lt(nil, Value) -> { tuple:pack(Value), true, 1 };
-lst_lt(Value, nil) -> { tuple:pack(Value), false, 1 }.
+lst_lt(nil, Value) -> { pack(Value), true, 1 };
+lst_lt(Value, nil) -> { pack(Value), false, 1 }.
 
 %% @doc sets a key and value
 %% Existing values will be overwritten
@@ -172,7 +171,7 @@ lst_lt(Value, nil) -> { tuple:pack(Value), false, 1 }.
 set({db, Database}, Key, Value) ->
   transact({db, Database}, fun (Tx)-> set(Tx, Key, Value) end);
 set({tx, Tx}, Key, Value) ->
-  ErrCode = fdb_nif:fdb_transaction_set(Tx, tuple:pack(Key), term_to_binary(Value)),
+  ErrCode = fdb_nif:fdb_transaction_set(Tx, pack(Key), term_to_binary(Value)),
   handle_fdb_result(ErrCode).
 
 %% @doc Clears a key and it's value
@@ -181,7 +180,7 @@ set({tx, Tx}, Key, Value) ->
 clear({db, Database}, Key) ->
   transact({db, Database}, fun (Tx)-> clear(Tx, Key) end);
 clear({tx, Tx}, Key) ->
-  ErrCode = fdb_nif:fdb_transaction_clear(Tx, tuple:pack(Key)),
+  ErrCode = fdb_nif:fdb_transaction_clear(Tx, pack(Key)),
   handle_fdb_result(ErrCode).
 
 %% @doc Clears all keys where `begin <= X < end`
@@ -190,7 +189,7 @@ clear({tx, Tx}, Key) ->
 clear_range({db, Database}, Begin, End) ->
   transact({db, Database}, fun (Tx)-> clear_range(Tx, Begin, End) end);
 clear_range({tx, Tx}, Begin, End) ->
-  ErrCode = fdb_nif:fdb_transaction_clear_range(Tx, tuple:pack(Begin), tuple:pack(End)),
+  ErrCode = fdb_nif:fdb_transaction_clear_range(Tx, pack(Begin), pack(End)),
   handle_fdb_result(ErrCode).
 
 -spec transact(fdb_database(), fun((fdb_transaction())->term())) -> term().
@@ -251,3 +250,5 @@ wait_non_blocking({false,F}) ->
 wait_non_blocking({true,F}) ->
   {ok, F}.
 
+pack({do_not_pack, X}) -> X;
+pack(X) -> tuple:pack(X).
