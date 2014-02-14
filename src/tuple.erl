@@ -9,6 +9,7 @@
 -define(ESCAPE, 254).
 -define(TERMINATOR,255).
 
+pack({do_not_pack,X}) -> X;
 pack([]) ->
   <<?TERMINATOR>>; 
 pack(Data) when is_list(Data) ->

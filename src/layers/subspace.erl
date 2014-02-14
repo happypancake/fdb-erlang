@@ -12,8 +12,10 @@
 get({SS,Handle}, K, D) -> fdb:get(Handle,ss_key(K,SS),D).
 
 get({SS,Handle}, Select = #select{}) -> 
+  Key = ss_key(Select,SS),
+  io:format("Key: ~p~n",[Key]),
   fdb:maybe_do([
-   fun() -> fdb:get(Handle, ss_key(Select,SS)) end,
+   fun() -> fdb:get(Handle, Key) end,
    fun(L) -> [{K, V}|| {{_,K},V} <- L] end
   ]);
 get({SS,Handle}, K) -> fdb:get(Handle,ss_key(K,SS)).
@@ -35,23 +37,15 @@ ss_key(V, SS) -> {SS,V}.
 
 lt(Select = #select{lt=LT,lte=LTE},SS) ->
   case {LT,LTE} of
-    {nil,nil} -> Select#select{lt=pack_ext({SS,<<>>})};
-    {LT,nil} -> Select#select{lt=pack_ext({SS,LT})};
-    {_,LTE} -> Select#select{lte=pack_ext({SS,LTE})}
+    {nil,nil} -> Select#select{lt=tuple:pack({SS,{do_not_pack,<<255>>}})};
+    {LT,nil} -> Select#select{lt=tuple:pack({SS,LT})};
+    {_,LTE} -> Select#select{lte=tuple:pack({SS,LTE})}
   end.
 
 gt(Select = #select{gt=GT,gte=GTE},SS) ->
   case {GT,GTE} of
-    {nil,nil} -> Select#select{gt=pack({SS,<<>>})};
-    {GT,nil} -> Select#select{gt=pack({SS,GT})};
-    {_,GTE} -> Select#select{gte=pack({SS,GTE})}
+    {nil,nil} -> Select#select{gt=tuple:pack({SS,{do_not_pack,<<0>>}})};
+    {GT,nil} -> Select#select{gt=tuple:pack({SS,GT})};
+    {_,GTE} -> Select#select{gte=tuple:pack({SS,GTE})}
   end.
-
-pack(Tuple) -> 
-  {do_not_pack,tuple:pack(Tuple)}.
-
-pack_ext(Tuple) -> 
-  P = tuple:pack(Tuple),
-  {do_not_pack,<<P/binary,255,255>>}.
-
 
