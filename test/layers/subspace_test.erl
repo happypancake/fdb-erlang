@@ -6,8 +6,8 @@
 
 basic_test()->
   DB = fdb:init_and_open(?SOLIB),
-  SpaceA = subspace:get_from_db(DB,<<"_a">>),
-  SpaceB = subspace:get_from_db(DB,<<"_b">>),
+  SpaceA = subspace:open(DB,<<"_a">>),
+  SpaceB = subspace:open(DB,<<"_b">>),
   subspace:set(SpaceA, <<"key">>, <<"A">>),
   subspace:set(SpaceB, <<"key">>, <<"B">>),
   ?assertEqual(<<"A">>, subspace:get(SpaceA, <<"key">>)),

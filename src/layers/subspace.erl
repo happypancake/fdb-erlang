@@ -3,7 +3,7 @@
 -export([clear/2, clear_range/3]).
 -export([transact/2]).
 
--export([get_from_db/2]).
+-export([open/2]).
 -export([get_name/1]).
 
 -behaviour(gen_fdb).
@@ -31,8 +31,10 @@ clear_range({ss,SS,H},Begin,End) -> fdb:clear_range(H,ss_key(Begin,SS),ss_key(En
 
 transact({ss,_,DB}, DoStuff) -> fdb:transact(DB, DoStuff).
 
-get_from_db(DB={db,_},SS) -> {ss,SS,DB}.
-get_name({ss,SS,_DB}) -> SS.
+open(DB={db,_},SS) -> {ss,SS,DB};
+open(Tx={tx,_},SS) -> {ss,SS,Tx}.
+
+get_name({ss,SS,_}) -> SS.
 
 ss_key(Select = #select{},SS) -> lt(gt(Select,SS),SS);
 ss_key(V, SS) -> {SS,V}.
