@@ -1,13 +1,13 @@
 -module(tuple).
 -export([pack/1, unpack/1]).
 
--define(TERMINATOR,0).
 -define(LIST, 1).
 -define(TUPLE, 2).
 -define(BINARY, 3).
 -define(FLOAT, 4).
 -define(INTEGER, 40).
--define(ESCAPE, 255).
+-define(ESCAPE, 254).
+-define(TERMINATOR,255).
 
 pack([]) ->
   <<?TERMINATOR>>; 
@@ -79,10 +79,10 @@ encode_range([H|T], R) ->
   encode_range(T,<<R/binary,(pack(H))/binary>>).
 
 escape_terminator(Data) ->
-  binary:replace(Data, <<?TERMINATOR>>, <<?TERMINATOR, ?ESCAPE>>,[global]).
+  binary:replace(Data, <<?TERMINATOR>>, <<?ESCAPE,?TERMINATOR>>,[global]).
 
 unescape_terminator(Data) ->
-  binary:replace(Data, <<?TERMINATOR, ?ESCAPE>>, <<?TERMINATOR>>, [global]).
+  binary:replace(Data, <<?ESCAPE, ?TERMINATOR>>, <<?TERMINATOR>>, [global]).
 
 
 number(N) ->
