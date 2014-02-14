@@ -14,6 +14,7 @@ basic_test()->
   ?assertEqual(<<"B">>, subspace:get(SpaceB, <<"key">>)),
   ?assertEqual([{<<"key">>,<<"B">>}], 
               subspace:get_range(SpaceB,<<"a">>,<<"z">>)),
+  ?assertEqual(<<"_a">>,subspace:get_name(SpaceA)),
   subspace:clear(SpaceA, <<"key">>),
   subspace:clear(SpaceB, <<"key">>).
   
