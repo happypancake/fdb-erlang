@@ -5,7 +5,7 @@
 
 -export([open/2]).
 -export([get_name/1,get_handle/1]).
--export([list/1]).
+-export([all/1]).
 
 -behaviour(gen_fdb).
 
@@ -38,7 +38,7 @@ open(Tx={tx,_},SS) -> {ss,SS,Tx}.
 get_name({ss,SS,_}) -> SS.
 get_handle({ss,_,H}) -> H.
 
-list(SS={ss,_,_}) -> 
+all(SS={ss,_,_}) -> 
   get_range(SS,{do_not_pack,<<0>>},{do_not_pack,<<255>>}).
 
 ss_key(Select = #select{},SS) -> lt(gt(Select,SS),SS);

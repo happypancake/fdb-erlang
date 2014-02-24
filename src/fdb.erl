@@ -98,11 +98,12 @@ get(Tx={tx, _}, Select = #select{}) ->
 get(FdbHandle, Key) -> 
   get(FdbHandle, Key, not_found).
 
-%% @doc Gets a range of key_values where `begin <= X < end`
+%% @doc Gets a range of key-value tuples where `begin <= X < end`
 -spec get_range(fdb_handle(), fdb_key(),fdb_key()) -> ([term()]|{error,nif_not_loaded}).
 %% @end
 get_range(Handle, Begin, End) ->
   get(Handle, #select{gte = Begin, lt = End}).
+
 
 %% @doc Gets a value using a key, falls back to a default value if not found
 -spec get(fdb_handle(), fdb_key(), term()) -> term().

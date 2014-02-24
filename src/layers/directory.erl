@@ -6,7 +6,7 @@
 
 -export([open/1,open/2,open/3]).
 -export([get_subspace/1,get_path/1]).
--export([list/1]).
+-export([all/1]).
 
 -behavior(gen_fdb).
 
@@ -17,7 +17,8 @@ get(D = {dir, _, _}, Key) -> subspace:get(get_subspace(D),Key).
 
 get(D = {dir, _, _}, Key, Default) -> subspace:get(get_subspace(D),Key, Default).
 
-set(D = {dir, _, _}, Key, Value) -> subspace:set(get_subspace(D),Key, Value).
+set(D = {dir, _, _}, Key, Value) -> 
+  subspace:set(get_subspace(D),Key, Value).
 
 get_range(D = {dir, _, _}, Begin, End) -> subspace:get_range(get_subspace(D),Begin,End).
 
@@ -44,7 +45,7 @@ open({dir,SS,Path},RelativePath) ->
 open(SS={ss,_SS,_Handle},Path) ->
   {dir,SS,Path}.
 
-list(D = {dir, _, _}) -> subspace:list(get_subspace(D)).
+all(D = {dir, _, _}) -> subspace:all(get_subspace(D)).
 
 navigate(Path,[]) -> Path;
 navigate(_Path,[root|Xs])->

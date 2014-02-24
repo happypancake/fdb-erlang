@@ -27,5 +27,6 @@
 -type fdb_transaction() :: {tx, term()}.
 -type fdb_handle() :: fdb_database() | fdb_transaction().
 -type fdb_key() :: term().
+-type fdb_key_value() :: {fdb_key(), term()}.
 
 
