@@ -120,10 +120,6 @@ static int get_FDBStreamingMode(ErlNifEnv* env, ERL_NIF_TERM atom, FDBStreamingM
    CMP_ATOM(atom_small,FDB_STREAMING_MODE_SMALL);
    CMP_ATOM(atom_medium,FDB_STREAMING_MODE_MEDIUM);
    CMP_ATOM(atom_serial,FDB_STREAMING_MODE_SERIAL);
-   CMP_ATOM(atom_location_cache_size,FDB_DB_OPTION_LOCATION_CACHE_SIZE); 
-   CMP_ATOM(atom_machine_id,FDB_DB_OPTION_MACHINE_ID); 
-   CMP_ATOM(atom_local_address,FDB_NET_OPTION_LOCAL_ADDRESS); 
-   CMP_ATOM(atom_trace_enable,FDB_NET_OPTION_TRACE_ENABLE); 
    return 0;
 }
 
@@ -978,7 +974,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, con
 static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     enif_transaction_t *Tx;
-    int64_t version;
+    ErlNifSInt64 version;
 
     if (  argc!=2
        || get_transaction(env,argv[0],&Tx) == 0
