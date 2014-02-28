@@ -974,7 +974,7 @@ static ERL_NIF_TERM nif_fdb_transaction_set_option(ErlNifEnv* env, int argc, con
 static ERL_NIF_TERM nif_fdb_transaction_set_read_version(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
 {
     enif_transaction_t *Tx;
-    int64_t version;
+    ErlNifSInt64 version;
 
     if (  argc!=2
        || get_transaction(env,argv[0],&Tx) == 0
